@@ -10,7 +10,7 @@ import { L, T, fmtSpeed, fmtAlt, fmtVs, fmtDist, fmtTime } from '../core/i18n.js
 import { MODE_MAP } from '../controls/TouchControls.js';
 import { RAD, clamp } from '../utils/math3d.js';
 
-const ASSIST_NAMES = { beginner: ['Principiante', 'Beginner'], intermediate: ['Intermedio', 'Intermediate'], expert: ['Experto', 'Expert'] };
+const ASSIST_NAMES = { beginner: ['Estabilizador', 'Stabiliser'], intermediate: ['Giróscopo', 'Gyro'], expert: ['Sin ayudas', 'No assists'] };
 const CAM_NAMES = { pilot: ['Piloto', 'Pilot'], chase: ['Seguimiento', 'Chase'], cinematic: ['Cinematográfica', 'Cinematic'], onboard: ['A bordo', 'Onboard'], free: ['Libre', 'Free'] };
 
 export class HUD {
@@ -202,6 +202,7 @@ export class HUD {
     this.chipsEl.replaceChildren(...[
       h('span', { class: 'chip accent' }, L(...ASSIST_NAMES[s.physics.assist])),
       h('span', { class: 'chip' }, L(...CAM_NAMES[sim.cameras.mode])),
+      this.app.input.dualRateLow ? h('span', { class: 'chip cyan' }, L('D/R bajo', 'D/R low')) : null,
       sim.cameras.mode === 'pilot' && !sim.cameras.tracking ? h('span', { class: 'chip' }, L('Sin seguimiento', 'No tracking')) : null].filter(Boolean));
     this.subEl.replaceChildren(h('span', {}, `⏱ ${fmtTime(sim.flightTime || 0)}`), h('span', {}, `${L('Pista', 'RWY')} ${env.runways[0]?.name || ''}`), this.signalEl);
     const bars = Math.ceil(sim.signal * 4);

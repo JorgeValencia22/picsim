@@ -283,6 +283,14 @@ export function liveryTexture(part, livery, opts = {}) {
             g.fill();
           }
           break;
+        case 'lowvis': {
+          // gris de baja visibilidad: lomo algo más oscuro con transición suave
+          const grd = g.createLinearGradient(0, 0, 0, H);
+          grd.addColorStop(0, base); grd.addColorStop(0.35, base); grd.addColorStop(0.5, secondary); grd.addColorStop(0.65, base); grd.addColorStop(1, base);
+          g.fillStyle = grd; g.fillRect(0, 0, W, H);
+          g.fillStyle = shade(base, 0.85); g.fillRect(0, 0, U(0.06), H);
+          break;
+        }
         case 'camo':
           camo(g, W, H, base, secondary, opts.seed || 3);
           g.fillStyle = shade(base, 1.25);
@@ -368,6 +376,9 @@ export function liveryTexture(part, livery, opts = {}) {
           g.fillStyle = accent;
           g.fillRect(0, V(0.74), W, V(0.04));
           break;
+        case 'lowvis':
+          g.fillStyle = shade(base, 0.92); g.fillRect(0, 0, U(0.12), H);
+          break;
         case 'camo':
           camo(g, W, H, base, secondary, (opts.seed || 3) + 7);
           break;
@@ -411,7 +422,7 @@ export function liveryTexture(part, livery, opts = {}) {
       // empenaje
       g.fillStyle = secondary;
       if (pattern === 'camo') camo(g, W, H, base, secondary, 11);
-      else if (pattern === 'invasion') { /* sólo en alas/fuselaje */ }
+      else if (pattern === 'invasion' || pattern === 'lowvis') { /* sin franjas en el empenaje */ }
       else {
         g.fillRect(0, V(0.62), W, V(0.18));
         g.fillStyle = accent;
@@ -425,9 +436,28 @@ export function liveryTexture(part, livery, opts = {}) {
         g.save(); g.translate(U(0.4), V(0.35)); g.rotate(Math.PI / 2); g.fillText(opts.number, 0, 0); g.restore();
       }
     }
+    panelLines(g, W, H, part, pattern === 'lowvis' ? 2 : 1);
     const tex = toTexture(c, { aniso: 4 });
     return tex;
   });
+}
+
+/** Líneas de paneles y remaches sutiles (dan escala y detalle sin geometría extra). */
+function panelLines(g, W, H, part, density = 1) {
+  g.save();
+  g.globalAlpha = 0.16;
+  g.strokeStyle = '#000000';
+  g.lineWidth = Math.max(1, W / 512);
+  if (part === 'fuselage') {
+    const us = density > 1 ? [0.1, 0.18, 0.27, 0.36, 0.45, 0.55, 0.65, 0.76, 0.87] : [0.12, 0.3, 0.5, 0.72];
+    for (const u of us) { g.beginPath(); g.moveTo(u * W, 0); g.lineTo(u * W, H); g.stroke(); }
+    for (const v of [0.15, 0.85]) { g.beginPath(); g.moveTo(0, v * H); g.lineTo(W, v * H); g.stroke(); }
+  } else {
+    const n = density > 1 ? 8 : 5;
+    for (let i = 1; i < n; i++) { const v = i / n; g.beginPath(); g.moveTo(0, v * H); g.lineTo(W, v * H); g.stroke(); }
+    g.beginPath(); g.moveTo(0.18 * W, 0); g.lineTo(0.18 * W, H); g.stroke();
+  }
+  g.restore();
 }
 
 function camo(g, W, H, base, secondary, seed) {

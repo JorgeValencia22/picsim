@@ -105,7 +105,7 @@ export function defaultSettings() {
       keyboard: { bindings: structuredClone(DEFAULT_KEYS), analogRate: 3.2, returnRate: 5, throttleRate: 0.55 },
       mouse: { flight: false, sensitivity: 1, invertY: false },
       gamepad: { enabled: true, axes: defaultAxisMap(), buttons: { camera: 4, reset: 3, launch: 0, flaps: 1, pause: 9, gear: 2 }, throttleIncremental: false },
-      touch: { enabled: 'auto', size: 1, opacity: 0.65, throttleSelfCenter: false, sticksSelfCenter: true, left: { x: 0.16, y: 0.72 }, right: { x: 0.84, y: 0.72 }, haptics: true },
+      touch: { enabled: 'auto', style: 'picasim', showTrims: true, size: 1, opacity: 0.65, throttleSelfCenter: false, sticksSelfCenter: true, left: { x: 0.16, y: 0.72 }, right: { x: 0.84, y: 0.72 }, haptics: true },
       rates: { aileron: 1, elevator: 1, rudder: 1 },
       lowRate: 0.6, // fracción del recorrido con el dual rate en «bajo»
       expo: { aileron: 0.35, elevator: 0.3, rudder: 0.2 },

@@ -62,7 +62,8 @@ export function buildFullSpec(entry, mods = {}) {
   const tw = m.throwScale;
 
   // ── posición vertical del ala
-  const wingY = { high: H * 0.5, shoulder: H * 0.32, mid: 0, low: -H * 0.4 }[d.wingPos] ?? 0;
+  // ala alta: apoyada sobre el techo de la cabina (el perfil 'cabin' sube a 1,22·H en la zona del ala)
+  const wingY = { high: H * (d.fuseShape === 'cabin' ? 1.2 : 0.5), shoulder: H * 0.32, mid: 0, low: -H * 0.4 }[d.wingPos] ?? 0;
   const wingX = (d.wingX ?? cat.wingX) * L;
 
   const surfaces = [];

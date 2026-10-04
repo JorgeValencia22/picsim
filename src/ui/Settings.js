@@ -152,6 +152,7 @@ export class SettingsScreen extends Screen {
         L('Mode 1: profundidad izq. / motor der. · Mode 2: motor izq. / profundidad der.', 'Mode 1: elevator left / throttle right · Mode 2: throttle left / elevator right')),
       ...['aileron', 'elevator', 'rudder'].map((ch) => field(`${L('Recorrido', 'Rate')} · ${fnNames[ch]}`, range(0.3, 1, 0.05, c.rates[ch], (v) => { c.rates[ch] = v; sv(); }, pct))),
       ...['aileron', 'elevator', 'rudder'].map((ch) => field(`${L('Exponencial', 'Expo')} · ${fnNames[ch]}`, range(0, 0.8, 0.05, c.expo[ch], (v) => { c.expo[ch] = v; sv(); }, pct), L('Suaviza el centro del stick', 'Softens the stick centre'))),
+      field(L('Dual rate «bajo»', 'Low dual rate'), range(0.3, 0.9, 0.05, c.lowRate ?? 0.6, (v) => { c.lowRate = v; sv(); }, pct), L('Recorrido con el interruptor en bajo (tecla Y o botón D/R)', 'Throw with the switch on low (Y key or D/R button)')),
       field(L('Mezcla alerón → timón', 'Aileron → rudder mix'), range(0, 0.6, 0.05, c.mixAileronRudder, (v) => { c.mixAileronRudder = v; sv(); }, pct), L('Coordina los virajes automáticamente', 'Coordinates turns automatically')),
 
       h('div', { class: 'section-title' }, L('Teclado', 'Keyboard')),
@@ -182,6 +183,8 @@ export class SettingsScreen extends Screen {
 
       h('div', { class: 'section-title' }, L('Controles táctiles', 'Touch controls')),
       field(L('Mostrar', 'Show'), segmented([{ value: 'auto', label: L('Automático', 'Auto') }, { value: 'on', label: L('Siempre', 'Always') }, { value: 'off', label: L('Nunca', 'Never') }], t.enabled, (v) => { t.enabled = v; sv(); a.input.updateTouchVisibility(); })),
+      field(L('Estilo de sticks', 'Stick style'), segmented([{ value: 'picasim', label: L('Paneles cuadrados', 'Square pads') }, { value: 'round', label: L('Circulares', 'Round') }], t.style || 'picasim', (v) => { t.style = v; a.input.touch.applyLayout(); sv(); }), L('Paneles grandes tipo cardán de emisora; se controlan desde toda la mitad de la pantalla', 'Large transmitter-gimbal pads; control from anywhere on each half of the screen')),
+      field(L('Botones de trim', 'Trim buttons'), toggle(t.showTrims !== false, (v) => { t.showTrims = v; a.input.touch.applyLayout(); sv(); })),
       field(L('Tamaño de los sticks', 'Stick size'), range(0.6, 1.6, 0.05, t.size, (v) => { t.size = v; a.input.touch.applyLayout(); sv(); }, pct)),
       field(L('Opacidad', 'Opacity'), range(0.2, 1, 0.05, t.opacity, (v) => { t.opacity = v; a.input.touch.applyLayout(); sv(); }, pct)),
       field(L('Retorno al centro de los sticks', 'Sticks return to centre'), toggle(t.sticksSelfCenter, (v) => { t.sticksSelfCenter = v; sv(); })),
@@ -231,7 +234,7 @@ export class SettingsScreen extends Screen {
     const set = (k) => (v) => { p[k] = v; sv(); };
     return h('div', {},
       h('div', { class: 'section-title' }, L('Asistencias', 'Assists')),
-      field(L('Nivel de asistencia', 'Assist level'), segmented([{ value: 'beginner', label: L('Principiante', 'Beginner') }, { value: 'intermediate', label: L('Intermedio', 'Intermediate') }, { value: 'expert', label: L('Experto', 'Expert') }], p.assist, set('assist'))),
+      field(L('Ayudas de vuelo', 'Flight assists'), segmented([{ value: 'expert', label: L('Sin ayudas (real)', 'No assists (real)') }, { value: 'intermediate', label: L('Giróscopo', 'Gyro') }, { value: 'beginner', label: L('Estabilizador', 'Stabiliser') }], p.assist, set('assist'))),
       field(L('Limitar alabeo y cabeceo (principiante)', 'Limit bank and pitch (beginner)'), toggle(p.limitAttitude, set('limitAttitude')), L('Desactivado: movimiento libre (toneles y loopings) con auto-nivelado al soltar el stick', 'Off: free movement (rolls and loops) with auto-level when the stick is released')),
       field(L('Alabeo máximo (si se limita)', 'Max bank (when limited)'), range(20, 75, 5, p.maxBank, set('maxBank'), (v) => `${v}°`)),
       field(L('Cabeceo máximo (si se limita)', 'Max pitch (when limited)'), range(15, 45, 5, p.maxPitch, set('maxPitch'), (v) => `${v}°`)),
@@ -240,7 +243,7 @@ export class SettingsScreen extends Screen {
       field(L('Ayuda al aterrizaje', 'Landing aid'), toggle(p.landingAid, set('landingAid')), L('Redondeo automático en principiante', 'Automatic flare in beginner mode')),
       field(L('Control de velocidad', 'Speed hold'), toggle(p.speedHold, set('speedHold'))),
       h('div', { class: 'section-title' }, L('Simulación', 'Simulation')),
-      field(L('Modelo aerodinámico', 'Aerodynamic model'), segmented([{ value: 'arcade', label: 'Arcade' }, { value: 'casual', label: 'Casual' }, { value: 'realistic', label: L('Realista', 'Realistic') }, { value: 'expert', label: L('Experto', 'Expert') }], p.fidelity, set('fidelity')),
+      field(L('Modelo aerodinámico', 'Aerodynamic model'), segmented([{ value: 'realistic', label: L('Realista', 'Realistic') }, { value: 'expert', label: L('Experto', 'Expert') }, { value: 'casual', label: 'Casual' }, { value: 'arcade', label: 'Arcade' }], p.fidelity, set('fidelity')),
         L('Arcade: más amortiguación, sin par motor ni efectos giroscópicos, poca turbulencia y daños tolerantes. Experto: máxima fidelidad.', 'Arcade: extra damping, no torque or gyroscopic effects, little turbulence and forgiving damage. Expert: maximum fidelity.')),
       field(L('Daños', 'Damage'), toggle(p.damage, set('damage'))),
       field(L('Radio de vuelo (alcance de radio)', 'Flight radius (radio range)'), range(300, 1500, 50, p.flightRadius, set('flightRadius'), (v) => `${v} m`)),

@@ -32,6 +32,8 @@ import { PauseMenu } from './ui/PauseMenu.js';
 import { ReplayUI } from './ui/Replay.js';
 import { h } from './ui/dom.js';
 import { OfflineAdapter } from './net/NetworkAdapter.js';
+import { registerServiceWorker, lockBrowserGestures, WakeLock, trapBackButton, recommendedPreset, isMobile } from './core/Platform.js';
+import { GRAPHICS_PRESETS } from './data/settings.js';
 
 const CAM_LABELS = { pilot: ['Cámara de piloto', 'Pilot camera'], chase: ['Cámara de seguimiento', 'Chase camera'], cinematic: ['Cámara cinematográfica', 'Cinematic camera'], onboard: ['Cámara a bordo', 'Onboard camera'], free: ['Cámara libre (arrastra para mirar, rueda para avanzar)', 'Free camera (drag to look, wheel to move)'] };
 
@@ -39,7 +41,15 @@ class App {
   constructor() {
     this.uiRoot = document.getElementById('ui-root');
     this.storage = new Storage();
-    this.settings = deepMerge(defaultSettings(), migrateSettings(this.storage.get('settings', {})) || {});
+    const saved = this.storage.get('settings', null);
+    this.settings = deepMerge(defaultSettings(), migrateSettings(saved || {}) || {});
+    if (!saved) {
+      const preset = recommendedPreset();
+      Object.assign(this.settings.graphics, structuredClone(GRAPHICS_PRESETS[preset]), { preset });
+      delete this.settings.graphics.label;
+      if (isMobile()) { this.settings.graphics.dynamicResolution = true; this.settings.graphics.targetFps = 60; }
+    }
+    this.wakeLock = new WakeLock();
     this.bus = new EventBus();
     this.net = new OfflineAdapter();
     this.state = 'boot';
@@ -55,6 +65,9 @@ class App {
     })();
     this.applyLanguage(false);
     this.applyUiPrefs();
+    registerServiceWorker();
+    lockBrowserGestures();
+    trapBackButton(() => this.onBack());
     setLoad(0.05, L('Iniciando motor gráfico…', 'Starting graphics engine…'));
     try {
       this.renderer = new Renderer(document.getElementById('app'), this.settings.graphics);
@@ -81,8 +94,7 @@ class App {
     this.bindEvents();
     // el audio sólo puede arrancar tras un gesto del usuario
     const unlock = () => { this.audio.init(); this.audio.applyVolumes(); if (this.sim.aircraft) this.audio.setAircraft(this.sim.aircraft.spec); if (this.sim.env) this.audio.setAmbience(this.sim.env.ambience, this.sim.weather); };
-    window.addEventListener('pointerdown', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
+    for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) window.addEventListener(ev, unlock, { once: true });
     this.last = performance.now();
     requestAnimationFrame((t) => this.loop(t));
     try {
@@ -231,6 +243,19 @@ class App {
     }
   }
 
+  /** Botón «atrás» del sistema (Android): pausa durante el vuelo o vuelve a la pantalla anterior. */
+  onBack() {
+    const modal = document.querySelector('.modal-backdrop');
+    if (modal) { modal.remove(); return true; }
+    if (this.state === 'replay') { this.exitReplay(); return true; }
+    if (this.state === 'flight') {
+      if (this.ui.stack.length) return this.ui.back();
+      if (this.pause.open) this.resume(); else this.openPause();
+      return true;
+    }
+    return this.ui.back();
+  }
+
   /* ─────────────────────────── navegación ─────────────────────────── */
 
   openFlightMenu(tab = 'aircraft', inFlight = false) {
@@ -298,6 +323,7 @@ class App {
     this.hud.setAircraft(this.sim.aircraft.spec);
     this.hud.show(true);
     this.state = 'flight';
+    this.wakeLock.acquire();
     document.body.classList.add('in-flight');
     this.input.updateTouchVisibility(true);
     document.body.classList.toggle('touch', this.input.touch.visible);
@@ -385,6 +411,7 @@ class App {
     if (this.state === 'flight') this.sim.endFlight();
     this.sim.stopReplay(false);
     this.state = 'menu';
+    this.wakeLock.release();
     this.ui.onEmpty = null;
     this.hud.show(false);
     document.body.classList.remove('in-flight', 'touch');

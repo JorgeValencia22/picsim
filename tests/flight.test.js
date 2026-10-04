@@ -252,3 +252,39 @@ test('principiante con topes activados: el alabeo queda limitado al ángulo conf
   });
   assert.ok(maxBank < 55 * DEG, `alabeo máximo ${(maxBank * RAD).toFixed(0)}°`);
 });
+
+test('sin ayudas: soltado a 50° de alabeo, un warbird o un jet trimado mantiene la inclinación', () => {
+  for (const id of ['p51', 'vipersj', 'extra300']) {
+    const s = spec(id);
+    const ac = aircraft(id);
+    const V = s.perf.cruiseSpeed;
+    ac.resetTo(world, { x: 0, z: 0, y: 400, heading: 0, bank: 50 * DEG, speed: V });
+    ac.engine.r = 0.7;
+    run(ac, world, 3, (a) => { a.cmd.throttle = 0.7; a.cmd.aileron = 0; a.cmd.elevator = 0; a.cmd.rudder = 0; });
+    assert.ok(ac.telemetry.bank > 15 * DEG, `${id}: conserva el alabeo (${(ac.telemetry.bank * RAD).toFixed(0)}°) — no hay autonivelado artificial`);
+  }
+});
+
+test('trimado de fábrica: compensa el par motor (alerón a la derecha en hélices tractoras)', () => {
+  assert.ok(spec('p51').trim.aileron > 0.02, 'P-51 con trim de alerón a la derecha');
+  assert.deepEqual(spec('nimbusf3j').trim, { aileron: 0, elevator: 0, rudder: 0 }, 'sin motor no hay trim de par');
+});
+
+test('rotura estructural por exceso de g con daños activados', () => {
+  const ac = aircraft('f16');
+  ac.resetTo(world, { x: 0, z: 0, y: 500, heading: 0, speed: 95 });
+  run(ac, world, 2, (a) => { a.cmd.throttle = 1; a.cmd.elevator = 1; });
+  assert.ok(ac.damage.wingL < 1 || ac.damage.wingR < 1, 'alas dañadas por sobrecarga');
+  const nd = aircraft('f16', { damage: false });
+  nd.resetTo(world, { x: 0, z: 0, y: 500, heading: 0, speed: 95 });
+  run(nd, world, 2, (a) => { a.cmd.throttle = 1; a.cmd.elevator = 1; });
+  assert.equal(nd.damage.wingL, 1, 'sin daños no se rompe');
+});
+
+test('trims de emisora: desplazan la deflexión de la superficie sin tocar el stick', () => {
+  const ac = aircraft('skylark');
+  ac.resetTo(world, { x: 0, z: 0, y: 100, heading: 0, speed: 12 });
+  ac.cmd.trim = { aileron: 0, elevator: 0.1, rudder: 0 };
+  run(ac, world, 0.5, (a) => { a.cmd.elevator = 0; a.cmd.throttle = 0.6; });
+  assert.ok(Math.abs(ac.defl.elevator - (0.1 + ac.spec.trim.elevator)) < 0.01);
+});

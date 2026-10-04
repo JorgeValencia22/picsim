@@ -11,8 +11,8 @@ import { buildFullSpec, AircraftRegistry, EDITOR_LIMITS } from '../aircraft/Airc
 import { specTable } from './specSheet.js';
 import { fmtSpeed } from '../core/i18n.js';
 
-const PATTERNS = ['stripe', 'checker', 'sunburst', 'tips', 'lightning', 'swoosh', 'camo', 'invasion', 'arrow', 'zigzag'];
-const PATTERN_LABELS = { stripe: ['Franjas', 'Stripes'], checker: ['Damero', 'Checker'], sunburst: ['Rayos de sol', 'Sunburst'], tips: ['Puntas', 'Tips'], lightning: ['Rayo', 'Lightning'], swoosh: ['Curva', 'Swoosh'], camo: ['Camuflaje', 'Camo'], invasion: ['Bandas de invasión', 'Invasion stripes'], arrow: ['Flecha', 'Arrow'], zigzag: ['Zigzag', 'Zigzag'] };
+const PATTERNS = ['stripe', 'checker', 'sunburst', 'tips', 'lightning', 'swoosh', 'camo', 'lowvis', 'invasion', 'arrow', 'zigzag'];
+const PATTERN_LABELS = { stripe: ['Franjas', 'Stripes'], checker: ['Damero', 'Checker'], sunburst: ['Rayos de sol', 'Sunburst'], tips: ['Puntas', 'Tips'], lightning: ['Rayo', 'Lightning'], swoosh: ['Curva', 'Swoosh'], camo: ['Camuflaje', 'Camo'], lowvis: ['Gris baja visibilidad', 'Low-vis grey'], invasion: ['Bandas de invasión', 'Invasion stripes'], arrow: ['Flecha', 'Arrow'], zigzag: ['Zigzag', 'Zigzag'] };
 
 export class AircraftSelection extends Screen {
   constructor(app) {

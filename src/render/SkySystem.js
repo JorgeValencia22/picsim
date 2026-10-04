@@ -133,7 +133,8 @@ export class SkySystem {
     this.sun.color.copy(mix(a.sun, b.sun));
     this.sun.intensity = sunI;
     this.hemi.color.copy(zen).lerp(new THREE.Color('#ffffff'), 0.35);
-    this.hemi.groundColor.copy(mix(a.ground, b.ground)).lerp(new THREE.Color('#3b3a2e'), 0.4);
+    // luz rebotada por el suelo: ilumina la panza de las alas de forma creíble
+    this.hemi.groundColor.copy(mix(a.ground, b.ground)).lerp(new THREE.Color(elev < -4 ? '#2a2a2a' : '#8d8670'), 0.55);
     this.hemi.intensity = lerp(a.hemi, b.hemi, t) * (1 + cloud * 0.25);
     this.night = elev < -4;
     // luz lunar para que el vuelo nocturno sea jugable

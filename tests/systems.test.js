@@ -199,6 +199,17 @@ test('configuración: la fusión conserva valores nuevos por defecto y respeta l
   const merged = deepMerge(defaultSettings(), { physics: { assist: 'expert' }, graphics: { preset: 'low' } });
   assert.equal(merged.physics.assist, 'expert');
   assert.equal(merged.physics.limitAttitude, false, 'sin topes de actitud por defecto');
+  assert.equal(defaultSettings().physics.assist, 'expert', 'sin ayudas por defecto');
+  assert.equal(defaultSettings().physics.fidelity, 'realistic');
   assert.equal(merged.graphics.preset, 'low');
   assert.ok(merged.controls.keyboard.bindings.throttleUp.includes('ShiftLeft'));
+});
+
+test('migración: configuraciones antiguas pasan a vuelo realista sin ayudas', async () => {
+  const { migrateSettings } = await import('../src/data/settings.js');
+  const old = { version: 1, physics: { assist: 'beginner', fidelity: 'casual', damage: false } };
+  const m = migrateSettings(old);
+  assert.equal(m.physics.assist, 'expert');
+  assert.equal(m.physics.fidelity, 'realistic');
+  assert.equal(m.physics.damage, false, 'conserva el resto de preferencias');
 });

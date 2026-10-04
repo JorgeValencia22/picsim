@@ -316,7 +316,7 @@ export const AIRCRAFT_DATA = [
     prop: { type: 'turbine', power: 0, thrust: 180, exitSpeed: 270, rpm: 118000, capacity: 3000, drain: 520, spool: 2.4, idle: 0.3 },
     gear: { type: 'tricycle', wheel: 0.085, retract: true },
     staticMargin: 0.08, launch: ['runway', 'air'], servo: 320, dragScale: 1.0,
-    paint: P('#9aa5b1', '#6b7785', '#f0f0f0', 'camo', 'matte'),
+    paint: P('#a3acb5', '#8a949e', '#2b2f33', 'lowvis', 'matte'),
   },
   {
     id: 'f18', name: 'F-18 RC', category: 'jet',
@@ -329,7 +329,7 @@ export const AIRCRAFT_DATA = [
     prop: { type: 'turbine', power: 0, thrust: 220, exitSpeed: 265, rpm: 110000, capacity: 3600, drain: 600, spool: 2.5, idle: 0.3 },
     gear: { type: 'tricycle', wheel: 0.095, retract: true },
     staticMargin: 0.08, launch: ['runway', 'air'], servo: 320, dragScale: 1.05,
-    paint: P('#a7b0ba', '#7f8a96', '#eeeeee', 'camo', 'matte'),
+    paint: P('#a9b2bb', '#8c96a0', '#2b2f33', 'lowvis', 'matte'),
   },
   {
     id: 'jetster70', name: 'Jetster 70 EDF', category: 'jet',

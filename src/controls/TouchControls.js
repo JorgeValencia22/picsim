@@ -24,6 +24,7 @@ const ICONS = {
   brake: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v5" stroke="currentColor" stroke-width="2"/></svg>',
   airbrake: '<svg viewBox="0 0 24 24"><path d="M3 15h18M9 15l3-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   instruments: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 12l4-3" stroke="currentColor" stroke-width="2"/></svg>',
+  dualRate: '<svg viewBox="0 0 24 24"><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" font-family="sans-serif">D/R</text></svg>',
   hud: '<svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h8" stroke="currentColor" stroke-width="2"/></svg>',
 };
 
@@ -57,13 +58,15 @@ export class TouchControls {
     el.innerHTML = `
       <div class="tstick left" data-stick="left"><div class="tstick-base"><span class="tlabel tl-y"></span><span class="tlabel tl-x"></span><div class="tstick-knob"></div></div></div>
       <div class="tstick right" data-stick="right"><div class="tstick-base"><span class="tlabel tl-y"></span><span class="tlabel tl-x"></span><div class="tstick-knob"></div></div></div>
+      <div class="ttrims left" data-side="left"></div>
+      <div class="ttrims right" data-side="right"></div>
       <div class="tbtns top"></div>
       <div class="tbtns side"></div>
       <div class="tedit-bar hidden"><span>${L('Arrastra los sticks para moverlos', 'Drag the sticks to move them')}</span><button class="btn small" data-act="editDone">${L('Listo', 'Done')}</button></div>`;
     this.root.appendChild(el);
     this.el = el;
     this.sticks = { left: el.querySelector('.tstick.left'), right: el.querySelector('.tstick.right') };
-    const topBtns = [['pause', L('Pausa', 'Pause')], ['camera', L('Cámara', 'Camera')], ['reset', L('Reiniciar', 'Reset')], ['hud', 'HUD'], ['instruments', L('Instrumentos', 'Instruments')]];
+    const topBtns = [['pause', L('Pausa', 'Pause')], ['camera', L('Cámara', 'Camera')], ['reset', L('Reiniciar', 'Reset')], ['dualRate', 'D/R'], ['hud', 'HUD'], ['instruments', L('Instrumentos', 'Instruments')]];
     const sideBtns = [['launch', L('Lanzar', 'Launch')], ['flaps', 'Flaps'], ['gear', L('Tren', 'Gear')], ['airbrake', L('Frenos aire', 'Airbrake')], ['brake', L('Freno', 'Brake')]];
     const mk = (parent, [id, label]) => {
       const b = document.createElement('button');
@@ -78,6 +81,8 @@ export class TouchControls {
     for (const d of topBtns) this.buttons[d[0]] = mk(el.querySelector('.tbtns.top'), d);
     for (const d of sideBtns) this.buttons[d[0]] = mk(el.querySelector('.tbtns.side'), d);
 
+    this.trimEls = { left: el.querySelector('.ttrims.left'), right: el.querySelector('.ttrims.right') };
+    window.addEventListener('resize', () => this.applyLayout());
     el.addEventListener('pointerdown', (e) => this.onDown(e));
     el.addEventListener('pointermove', (e) => this.onMove(e));
     el.addEventListener('pointerup', (e) => this.onUp(e));
@@ -89,19 +94,53 @@ export class TouchControls {
   /** Aplica tamaño, opacidad, posición y etiquetas según la configuración y el modo. */
   applyLayout() {
     const s = this.s;
-    const size = Math.round(150 * (s.size || 1));
+    // estilo PicaSim: paneles cuadrados grandes proporcionales a la pantalla; estilo clásico: círculos
+    this.picasim = (s.style || 'picasim') === 'picasim';
+    const base = this.picasim ? Math.min(window.innerHeight * 0.46, window.innerWidth * 0.26, 240) : 150;
+    const size = Math.round(base * (s.size || 1));
+    this.stickSize = size;
+    this.el.classList.toggle('picasim', this.picasim);
     this.el.style.setProperty('--stick-size', `${size}px`);
     this.el.style.setProperty('--touch-opacity', s.opacity ?? 0.65);
     for (const side of ['left', 'right']) {
       const st = this.sticks[side];
       st.style.left = `${(s[side]?.x ?? (side === 'left' ? 0.16 : 0.84)) * 100}%`;
-      st.style.top = `${(s[side]?.y ?? 0.72) * 100}%`;
+      // el panel y sus trims deben caber completos en pantalla (también en móviles bajos)
+      let y = s[side]?.y ?? 0.72;
+      const half = (size / 2 + (s.showTrims === false ? 8 : 32)) / Math.max(1, window.innerHeight);
+      y = Math.min(y, 1 - half);
+      st.style.top = `${y * 100}%`;
       const map = MODE_MAP[this.modeRef()] || MODE_MAP[2];
       const names = { aileron: L('Alerones', 'Ailerons'), elevator: L('Profundidad', 'Elevator'), rudder: L('Timón', 'Rudder'), throttle: L('Motor', 'Throttle') };
       st.querySelector('.tl-y').textContent = names[map[side].y];
       st.querySelector('.tl-x').textContent = names[map[side].x];
+      this.buildTrims(side, map[side]);
     }
     this.updateKnobs();
+  }
+
+  /** Botones de trim alrededor de cada stick (como los trims digitales de una emisora). */
+  buildTrims(side, chans) {
+    const box = this.trimEls?.[side];
+    if (!box) return;
+    box.replaceChildren();
+    box.classList.toggle('hidden', this.s.showTrims === false);
+    const st = this.sticks[side];
+    box.style.left = st.style.left;
+    box.style.top = st.style.top;
+    const add = (cls, act, label) => {
+      if (!act) return;
+      const b = document.createElement('button');
+      b.className = `ttrim ${cls}`;
+      b.dataset.act = act;
+      b.textContent = label;
+      b.setAttribute('aria-label', act);
+      box.appendChild(b);
+    };
+    const yTrim = { elevator: ['trimElevatorDown', 'trimElevatorUp'] }[chans.y];
+    const xTrim = { aileron: ['trimAileronLeft', 'trimAileronRight'], rudder: ['trimRudderLeft', 'trimRudderRight'] }[chans.x];
+    if (yTrim) { add('up', yTrim[0], '▲'); add('down', yTrim[1], '▼'); }
+    if (xTrim) { add('left', xTrim[0], '◀'); add('right', xTrim[1], '▶'); }
   }
 
   setVisible(v) {
@@ -127,21 +166,22 @@ export class TouchControls {
   }
 
   onDown(e) {
-    const btn = e.target.closest('.tbtn, [data-act="editDone"]');
+    const btn = e.target.closest('.tbtn, .ttrim, [data-act="editDone"]');
     if (btn) {
       e.preventDefault();
       const act = btn.dataset.act;
       if (act === 'editDone') { this.setEditing(false); return; }
-      if (act === 'brake' || act === 'airbrake') { this.values[act] = 1; btn.classList.add('on'); btn.setPointerCapture(e.pointerId); btn.dataset.pid = e.pointerId; }
+      if (act === 'brake' || act === 'airbrake') { this.values[act] = 1; btn.classList.add('on'); this.capture(btn, e.pointerId); btn.dataset.pid = e.pointerId; }
       else this.onAction(act === 'flaps' ? 'flaps' : act, 'touch');
       if (this.s.haptics && navigator.vibrate) navigator.vibrate(12);
       return;
     }
     const stickEl = e.target.closest('.tstick');
     const side = stickEl ? stickEl.dataset.stick : this.zoneSide(e);
-    if (side && !this.stickState[side].id && (stickEl || this.nearStick(side, e))) {
+    const inZone = this.picasim && e.clientY > window.innerHeight * 0.2;
+    if (side && !this.stickState[side].id && (stickEl || inZone || this.nearStick(side, e))) {
       e.preventDefault();
-      this.el.setPointerCapture(e.pointerId);
+      this.capture(this.el, e.pointerId);
       const st = this.stickState[side];
       st.id = e.pointerId;
       if (this.editing) {
@@ -150,12 +190,19 @@ export class TouchControls {
         return;
       }
       st.origin = this.stickCenter(side);
+      // el eje del acelerador es relativo al toque (no salta al apoyar el dedo)
+      st.thrStart = { y: e.clientY, v: st.y };
       this.moveStick(side, e);
       return;
     }
     // resto de la pantalla: gestos de cámara
     this.camPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    this.el.setPointerCapture(e.pointerId);
+    this.capture(this.el, e.pointerId);
+  }
+
+  /** Captura del puntero tolerante a fallos (puntero ya liberado o navegador sin soporte). */
+  capture(el, id) {
+    try { el.setPointerCapture(id); } catch { /* el seguimiento continúa por eventos del contenedor */ }
   }
 
   zoneSide(e) {
@@ -164,7 +211,7 @@ export class TouchControls {
 
   nearStick(side, e) {
     const c = this.stickCenter(side);
-    const R = 150 * (this.s.size || 1);
+    const R = this.stickSize || 150;
     return Math.hypot(e.clientX - c.x, e.clientY - c.y) < R * 0.9;
   }
 
@@ -175,12 +222,14 @@ export class TouchControls {
 
   moveStick(side, e) {
     const st = this.stickState[side];
-    const R = (150 * (this.s.size || 1)) / 2;
+    const R = (this.stickSize || 150) / 2;
     const dx = (e.clientX - st.origin.x) / R;
     const dy = (e.clientY - st.origin.y) / R;
     st.x = clamp(dx, -1, 1);
-    st.y = clamp(-dy, -1, 1);
-    if (this.isThrottleStick(side)) this.throttleTouched = true;
+    if (this.isThrottleStick(side) && st.thrStart) {
+      st.y = clamp(st.thrStart.v - (e.clientY - st.thrStart.y) / R, -1, 1);
+      this.throttleTouched = true;
+    } else st.y = clamp(-dy, -1, 1);
     this.updateKnobs();
   }
 
@@ -245,7 +294,9 @@ export class TouchControls {
       const st = this.stickState[side];
       const k = this.sticks[side].querySelector('.tstick-knob');
       // el knob mide la mitad de la base: desplazarlo un 100% de su tamaño lo lleva al borde
-      k.style.transform = `translate(-50%, -50%) translate(${st.x * 100}%, ${-st.y * 100}%)`;
+      // recorrido del knob hasta el borde: 100 % de su tamaño (círculo, knob = ½ base) o 117 % (cuadrado, knob = 0,3 base)
+      const travel = this.picasim ? 117 : 100;
+      k.style.transform = `translate(-50%, -50%) translate(${st.x * travel}%, ${-st.y * travel}%)`;
     }
   }
 

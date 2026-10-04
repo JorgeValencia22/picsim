@@ -132,7 +132,7 @@ export class AircraftModel {
       metal: new THREE.MeshStandardMaterial({ color: '#a9b0b8', roughness: 0.3, metalness: 0.85 }),
       tire: new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.9 }),
       hub: new THREE.MeshStandardMaterial({ color: L.wheelColor || '#d8d8d8', roughness: 0.4, metalness: 0.5 }),
-      glass: new THREE.MeshStandardMaterial({ color: '#1a2a3a', roughness: 0.05, metalness: 0.6, transparent: true, opacity: 0.78 }),
+      glass: new THREE.MeshStandardMaterial({ color: '#16222e', roughness: 0.04, metalness: 0.75, transparent: true, opacity: 0.86, envMapIntensity: 1.6 }),
       prop: new THREE.MeshStandardMaterial({ color: L.propColor || '#1a1a1a', roughness: 0.5, side: THREE.DoubleSide }),
       spinner: new THREE.MeshStandardMaterial({ color: L.spinnerColor || L.accent, roughness: 0.3, metalness: 0.3 }),
       skin: new THREE.MeshStandardMaterial({ color: '#e0b48c', roughness: 0.8 }),
@@ -489,7 +489,53 @@ export class AircraftModel {
       pilot(this.cgX - 0.47 * L, H * 1.05, 0.9);
     } else if (style === 'cabin') {
       pilot(this.cgX - 0.24 * L, H * 0.95, 0.8);
+      // parabrisas y ventanillas laterales de cristal que siguen la forma del fuselaje
+      this.addMesh(this.fuselagePatch(0.105, 0.158, 0.4, 0.6), this.mats.glass).userData.noShadow = true;
+      this.addMesh(this.fuselagePatch(0.165, 0.37, 0.29, 0.45), this.mats.glass).userData.noShadow = true;
+      this.addMesh(this.fuselagePatch(0.165, 0.37, 0.55, 0.71), this.mats.glass).userData.noShadow = true;
     }
+  }
+
+  /** Punto de la superficie del fuselaje en (t a lo largo, v alrededor), desplazado hacia fuera. */
+  fuselagePoint(t, v, offset = 0) {
+    const W = this.spec.fuseW / 2, H = this.spec.fuseH / 2;
+    const pr = this.fuseProfile(t);
+    const phi = 2 * Math.PI * v - Math.PI / 2;
+    const c = Math.cos(phi), sn = Math.sin(phi), e = 2 / pr.n;
+    const z = W * pr.w * Math.sign(c) * Math.abs(c) ** e;
+    const yr = (sn >= 0 ? H * pr.top : H * pr.bot) * Math.sign(sn) * Math.abs(sn) ** e;
+    const len = Math.hypot(yr, z) || 1;
+    return new THREE.Vector3(this.cgX - t * this.spec.length, yr + pr.yc * H + (yr / len) * offset, z + (z / len) * offset);
+  }
+
+  /** Parche de superficie sobre el fuselaje (ventanillas, cristales). */
+  fuselagePatch(t0, t1, v0, v1, nt = 6, nv = 6) {
+    const off = Math.max(0.0015, this.spec.fuseW * 0.012);
+    const pos = [], idx = [];
+    for (let i = 0; i <= nt; i++) for (let j = 0; j <= nv; j++) {
+      const p = this.fuselagePoint(t0 + ((t1 - t0) * i) / nt, v0 + ((v1 - v0) * j) / nv, off);
+      pos.push(p.x, p.y, p.z);
+    }
+    for (let i = 0; i < nt; i++) for (let j = 0; j < nv; j++) {
+      const a = i * (nv + 1) + j, b = a + nv + 1;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    // orienta las normales hacia fuera del fuselaje
+    const n = geo.attributes.normal, P = geo.attributes.position;
+    const mid = Math.floor(P.count / 2);
+    const pc = new THREE.Vector3().fromBufferAttribute(P, mid);
+    const nc = new THREE.Vector3().fromBufferAttribute(n, mid);
+    const out = new THREE.Vector3(0, pc.y, pc.z);
+    if (nc.dot(out) < 0) {
+      const ia = geo.index.array;
+      for (let k = 0; k < ia.length; k += 3) { const tt = ia[k + 1]; ia[k + 1] = ia[k + 2]; ia[k + 2] = tt; }
+      geo.computeVertexNormals();
+    }
+    return geo;
   }
 
   /* ─────────────────────────────── Propulsión ─────────────────────────────── */

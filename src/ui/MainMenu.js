@@ -2,6 +2,7 @@
 import { h, icon } from './dom.js';
 import { Screen } from './UIManager.js';
 import { L } from '../core/i18n.js';
+import { canFullscreen, isIOS, isStandalone } from '../core/Platform.js';
 
 export const LOGO_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
   <path d="M8 38 L32 31 L56 38 L32 41 Z" fill="#ff8a1f"/>
@@ -28,7 +29,8 @@ export class MainMenu extends Screen {
         item('stats', L('Estadísticas', 'Statistics'), () => a.openStats()),
         item('info', L('Créditos', 'Credits'), () => a.openCredits())),
       h('div', { class: 'menu-quick' },
-        h('button', { class: 'btn small ghost', onClick: () => a.toggleFullscreen(), html: `${icon('fullscreen')}<span>${L('Pantalla completa', 'Fullscreen')}</span>` }),
+        canFullscreen() ? h('button', { class: 'btn small ghost', onClick: () => a.toggleFullscreen(), html: `${icon('fullscreen')}<span>${L('Pantalla completa', 'Fullscreen')}</span>` })
+          : (isIOS() && !isStandalone() ? h('button', { class: 'btn small ghost', onClick: () => a.ui.modal({ title: L('Instalar en el iPhone', 'Install on iPhone'), text: L('Para jugar a pantalla completa: pulsa Compartir en Safari y elige «Añadir a pantalla de inicio». Se abrirá como una aplicación, en horizontal y sin barras.', 'To play full screen: tap Share in Safari and choose «Add to Home Screen». It will open like an app, in landscape, with no bars.'), actions: [{ label: 'OK', kind: 'primary' }] }), html: `${icon('fullscreen')}<span>${L('Pantalla completa', 'Full screen')}</span>` }) : null),
         h('button', { class: 'btn small ghost', onClick: () => { a.settings.ui.language = a.settings.ui.language === 'es' ? 'en' : 'es'; a.applyLanguage(); a.saveSettings('ui'); } }, a.settings.ui.language === 'es' ? 'English' : 'Español')),
       h('div', { class: 'menu-foot' },
         h('div', {}, L('Último vuelo: ', 'Last flight: '), h('b', {}, ac ? ac.name : '—')),
