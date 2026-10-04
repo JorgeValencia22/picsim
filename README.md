@@ -5,6 +5,16 @@ aerodinámica por superficies, 30 aeronaves, 6 escenarios, meteorología que afe
 entrenamiento, desafíos, estadísticas y repeticiones. Todo el contenido (modelos 3D, terrenos,
 texturas y sonidos) se genera por código: no hay recursos externos ni referencias a archivos inexistentes.
 
+## Jugar en línea
+
+**https://jorgevalencia22.github.io/picsim/** (GitHub Pages, se actualiza con cada push a `main`).
+En Android (Chrome) usa «Instalar aplicación»; en iPhone (Safari) usa Compartir → «Añadir a pantalla de
+inicio»: se abre a pantalla completa, en horizontal y funciona sin conexión tras la primera visita.
+
+También está listo para **Render**: en el panel de Render elige *New → Blueprint* y el repositorio;
+`render.yaml` compila con `node tools/build.mjs` y publica `dist/` como sitio estático.
+Para la **Play Store** puede empaquetarse la PWA como *Trusted Web Activity* (p. ej. con Bubblewrap).
+
 ## Instalación y ejecución
 
 Requisitos: un navegador moderno con WebGL2 (Chrome, Edge, Firefox o Safari recientes) y
@@ -47,10 +57,15 @@ zona muerta, calibración de extremos y centros y monitor de ejes en vivo; las e
 OpenTX/FrSky/RadioMaster/Spektrum se detectan por nombre y se asignan en AETR/TAER. Los sticks
 táctiles admiten Mode 1–4, tamaño, opacidad, retorno al centro y reposicionamiento.
 
-**Sin topes de alabeo ni cabeceo.** Las aeronaves pueden girar libremente en todos los ejes con
-cualquier nivel de asistencia. En *Principiante* el stick gira el avión con amortiguación
-giroscópica (toneles y loopings completos) y al soltarlo se nivela solo. La limitación de ángulo
-existe como opción, desactivada por defecto (*Configuración → Física → Limitar alabeo y cabeceo*).
+**Vuelo realista por defecto: sin estabilizador ni giróscopo.** Si dejas el avión inclinado, se
+comporta según su aerodinámica: jets, warbirds y acrobáticos mantienen el alabeo; los entrenadores
+con mucho diedro tienden a nivelarse despacio, igual que los reales. Cada avión viene trimado de
+fábrica contra el par motor y puedes trimar como en una emisora (J/K alerón, U/M profundidad, N/H
+timón, O reinicia; botones ▲▼◀▶ en móvil) y alternar **dual rate** (Y / botón D/R). El giróscopo y
+el estabilizador existen sólo como ayudas opcionales.
+
+**Móvil (estilo PicaSim):** dos paneles cuadrados tipo cardán que responden en toda la mitad de la
+pantalla, acelerador relativo que se queda donde lo dejas, trims junto a cada stick y modos 1–4.
 
 ## Qué está implementado
 
