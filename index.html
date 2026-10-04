@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="RC FLIGHT SIMULATOR — simulador 3D de aeromodelismo con física aerodinámica por superficies, 30 aeronaves y 6 escenarios. PC, tablet y móvil.">
+  <meta name="theme-color" content="#070b10">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>RC FLIGHT SIMULATOR</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070b10'/%3E%3Cpath d='M10 36l22-6 22 6-22 3z' fill='%23ff8a1f'/%3E%3Cpath d='M29 22h6l2 26h-10z' fill='%23e9eef4'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/menus.css">
+  <link rel="stylesheet" href="styles/hud.css">
+  <link rel="stylesheet" href="styles/controls.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <div id="ui-root"></div>
+    <div id="loading" role="status" aria-live="polite">
+      <div class="loading-inner">
+        <div class="logo" style="justify-content:center;margin-bottom:0">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M8 38 L32 31 L56 38 L32 41 Z" fill="#ff8a1f"/>
+            <path d="M29 18 h6 l2.5 30 h-11 Z" fill="#e9eef4"/>
+            <path d="M24 49 h16 l-2 4 h-12 Z" fill="#e9eef4"/>
+            <path d="M44 12 a14 14 0 0 1 8 8" stroke="#3ec6ff" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M44 5 a21 21 0 0 1 15 15" stroke="#3ec6ff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.6"/>
+          </svg>
+          <div class="wordmark"><b>RC FLIGHT</b><span>SIMULATOR</span></div>
+        </div>
+        <div class="loading-bar"><span id="loading-fill"></span></div>
+        <div class="loading-text" id="loading-text">Iniciando…</div>
+        <noscript><p class="boot-error">Se necesita JavaScript para ejecutar el simulador.</p></noscript>
+      </div>
+    </div>
+    <div class="rotate-hint enabled" id="rotate-hint">
+      <div>
+        <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect x="20" y="8" width="24" height="44" rx="4" fill="none" stroke="#e9eef4" stroke-width="3"/><path d="M50 40 a20 20 0 0 1 -18 14" stroke="#ff8a1f" stroke-width="3" fill="none"/><path d="M30 50 l2 4 l4 -2" stroke="#ff8a1f" stroke-width="3" fill="none"/></svg>
+        <p>Gira el dispositivo a horizontal para volar con comodidad.<br><small>Rotate your device to landscape.</small></p>
+        <button class="btn small" id="rotate-dismiss">Continuar en vertical</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+/* HUD de vuelo, instrumentos, misiones, repeticiones y menú de pausa */
+
+.hud { position: absolute; inset: 0; z-index: 10; pointer-events: none !important; font-size: calc(1em * var(--hud-scale, 1)); opacity: var(--hud-opacity, 0.92); }
+.hud * { pointer-events: none; }
+.hud .clickable, .hud .clickable * { pointer-events: auto; }
+
+.hud-top { position: absolute; top: calc(10px + var(--safe-t)); left: calc(12px + var(--safe-l)); right: calc(12px + var(--safe-r)); display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.hud-box { background: rgba(8, 12, 18, 0.58); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 7px 11px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.hud-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.9em; }
+.hud-title .chip { font-size: 0.68em; padding: 1px 7px; }
+.hud-sub { display: flex; gap: 12px; color: var(--muted); font-size: 0.78em; margin-top: 3px; font-family: var(--font-mono); }
+.signal { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; }
+.signal i { width: 3px; background: rgba(255, 255, 255, 0.2); border-radius: 1px; }
+.signal i:nth-child(1) { height: 4px; } .signal i:nth-child(2) { height: 7px; } .signal i:nth-child(3) { height: 10px; } .signal i:nth-child(4) { height: 12px; }
+.signal i.on { background: var(--ok); }
+.signal.weak i.on { background: var(--warn); }
+.signal.lost i.on { background: var(--danger); }
+.hud-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.wind-ind { display: flex; align-items: center; gap: 9px; }
+.wind-ind svg { width: 34px; height: 34px; }
+.wind-ind .wv { font-family: var(--font-mono); font-size: 0.85em; line-height: 1.2; }
+.wind-ind .wv span { color: var(--muted); font-size: 0.85em; display: block; }
+.perf-box { font-family: var(--font-mono); font-size: 0.72em; color: var(--muted); line-height: 1.45; text-align: right; }
+
+.hud-tele { position: absolute; left: calc(12px + var(--safe-l)); bottom: calc(12px + var(--safe-b)); display: grid; grid-template-columns: repeat(3, auto); gap: 6px 16px; padding: 10px 14px; }
+.tv { min-width: 74px; }
+.tv b { display: block; font-family: var(--font-mono); font-size: 1.22em; font-weight: 600; }
+.tv span { font-size: 0.66em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.tv.warn b { color: var(--warn); }
+.tv.danger b { color: var(--danger); }
+.gauge-bar { height: 5px; background: rgba(255, 255, 255, 0.12); border-radius: 3px; overflow: hidden; margin-top: 3px; width: 74px; }
+.gauge-bar i { display: block; height: 100%; background: var(--accent); }
+.gauge-bar.batt i { background: var(--ok); }
+.gauge-bar.batt.low i { background: var(--danger); }
+
+.hud-instruments { position: absolute; right: calc(12px + var(--safe-r)); bottom: calc(12px + var(--safe-b)); display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 52vw; }
+.hud-instruments canvas { width: 86px; height: 86px; display: block; }
+
+.hud-stall { position: absolute; top: 34%; left: 50%; transform: translateX(-50%); padding: 7px 18px; border-radius: 8px; background: rgba(255, 90, 95, 0.85); color: #fff; font-weight: 800; letter-spacing: 0.2em; font-family: var(--font-display); font-size: 1.2em; animation: pulse 0.6s infinite; }
+.hud-center-msg { position: absolute; top: 22%; left: 50%; transform: translateX(-50%); text-align: center; }
+.maneuver-pop { padding: 10px 22px; border-radius: 12px; background: rgba(8, 12, 18, 0.7); border: 1px solid rgba(62, 198, 255, 0.45); text-align: center; animation: popIn 0.35s cubic-bezier(.2, 1.4, .4, 1); }
+.maneuver-pop b { display: block; font-family: var(--font-display); font-size: 1.6em; letter-spacing: 0.06em; color: var(--accent-2); text-transform: uppercase; }
+.maneuver-pop span { font-family: var(--font-mono); color: var(--muted); font-size: 0.85em; }
+@keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: none; } }
+
+.landing-card { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); min-width: 260px; padding: 14px 18px; text-align: center; animation: popIn 0.35s; }
+.landing-card h3 { margin: 0; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 1.5em; }
+.landing-card .score { font-family: var(--font-mono); font-size: 2.2em; font-weight: 700; color: var(--accent); }
+.landing-card .det { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; font-size: 0.8em; color: var(--muted); text-align: left; margin-top: 8px; }
+.landing-card .det b { color: var(--text); font-family: var(--font-mono); font-weight: 500; float: right; }
+
+.launch-hint { position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%); padding: 10px 18px; font-weight: 700; text-align: center; }
+.launch-hint kbd { background: rgba(255, 255, 255, 0.12); border: 1px solid var(--line-2); border-radius: 5px; padding: 1px 7px; font-family: var(--font-mono); }
+
+/* misión / instructor */
+.mission-panel { position: absolute; left: calc(12px + var(--safe-l)); top: calc(70px + var(--safe-t)); width: min(340px, 44vw); padding: 12px 14px; }
+.mission-panel .mtitle { font-size: 0.72em; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
+.mission-panel .mtext { font-size: 0.94em; line-height: 1.4; margin: 6px 0 8px; }
+.mission-panel .mprog { height: 5px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden; }
+.mission-panel .mprog i { display: block; height: 100%; background: var(--accent-2); transition: width 0.2s; }
+.mission-panel .mmeta { display: flex; justify-content: space-between; font-size: 0.75em; color: var(--muted); margin-top: 6px; font-family: var(--font-mono); }
+.mission-panel .tx-diagram { gap: 18px; margin: 10px 0 2px; }
+.mission-panel .tx-stick { width: 60px; height: 60px; }
+.mission-panel .tx-stick i { width: 14px; height: 14px; }
+.mission-panel .tx-stick.active { border-color: var(--accent); }
+
+/* pausa */
+.pause-menu { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(3, 6, 10, 0.55); backdrop-filter: blur(5px); padding: 16px; }
+.pause-card { width: min(420px, 100%); padding: 20px; max-height: 92vh; overflow: auto; }
+.pause-card h2 { margin: 0 0 14px; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.14em; text-align: center; }
+.pause-card .btn { width: 100%; margin-bottom: 7px; justify-content: flex-start; }
+.pause-card .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.pause-card .row2 .btn { margin-bottom: 0; }
+
+/* repeticiones */
+.replay-bar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + var(--safe-b)); width: min(760px, 94vw); padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; z-index: 12; }
+.replay-bar .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.replay-bar input[type='range'] { flex: 1; }
+.replay-bar .time { font-family: var(--font-mono); font-size: 0.85em; color: var(--muted); min-width: 90px; text-align: center; }
+.replay-tag { position: absolute; top: calc(12px + var(--safe-t)); left: calc(12px + var(--safe-l)); }
+
+@media (max-width: 760px), (max-height: 520px) {
+  .hud-tele { grid-template-columns: repeat(3, auto); gap: 2px 12px; padding: 5px 10px; bottom: auto; top: calc(10px + var(--safe-t)); left: 50%; transform: translateX(-50%); font-size: 0.72em; }
+  .hud-tele .tv { min-width: 58px; }
+  .hud-tele .tv.opt { display: none; }
+  .gauge-bar { width: 58px; }
+  .hud-top { top: calc(10px + var(--safe-t)); }
+  .hud-top > .hud-box:first-child { max-width: 30vw; font-size: 0.85em; }
+  .hud-right .wind-ind { display: none; }
+  .hud-instruments { top: calc(64px + var(--safe-t)); bottom: auto; max-width: 46vw; padding: 4px; }
+  .hud-instruments canvas { width: 62px; height: 62px; }
+  .hud-instruments canvas:nth-child(n+4) { display: none; }
+  .mission-panel { top: auto; bottom: calc(180px + var(--safe-b)); left: 50%; transform: translateX(-50%); width: min(380px, 60vw); font-size: 0.88em; }
+  .hud-sub { font-size: 0.7em; }
+  .landing-card { top: 30%; font-size: 0.85em; }
+}
+body.touch .hud-instruments { right: auto; left: calc(12px + var(--safe-l)); flex-direction: row; }
+body.touch .mission-panel { bottom: auto; top: calc(64px + var(--safe-t)); left: auto; right: calc(70px + var(--safe-r)); transform: none; width: min(320px, 40vw); }

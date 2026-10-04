@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "rc-flight-simulator", "runtimeExecutable": "node", "runtimeArgs": ["server.js", "8097"], "port": 8097 }
+  ]
+}
