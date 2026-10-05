@@ -15,6 +15,7 @@ import { WeatherSystem, defaultWeather } from './WeatherSystem.js';
 import { EnvironmentRenderer } from '../render/EnvironmentRenderer.js';
 import { SkySystem } from '../render/SkySystem.js';
 import { AircraftModel } from '../render/AircraftModel.js';
+import { shapeFor } from '../render/AircraftShapes.js';
 import { Effects } from '../render/Effects.js';
 import { FlightAssist } from '../controls/FlightAssist.js';
 import { ManeuverDetector, MANEUVERS } from '../gameplay/ManeuverDetector.js';
@@ -157,6 +158,8 @@ export class Simulation {
   computeOnboardOffset(spec) {
     const L = spec.length, H = spec.fuseH / 2;
     if (spec.canopy === 'none' || spec.fuseShape === 'profile') return new THREE.Vector3(spec.cgX - L * 0.75, H + spec.span * 0.06, 0);
+    const cd = shapeFor(spec)?.canopy;
+    if (cd) return new THREE.Vector3(spec.cgX - L * (cd.t0 + (cd.t1 - cd.t0) * (cd.peak + 0.05)), H * (1 + cd.h * 0.6), 0);
     const t0 = spec.canopy === 'glider' ? 0.12 : spec.fuseShape === 'jet' ? 0.26 : spec.canopy === 'cabin' ? 0.22 : 0.36;
     return new THREE.Vector3(spec.cgX - L * t0, H * 1.05 + 0.02, 0);
   }

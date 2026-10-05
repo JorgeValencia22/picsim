@@ -297,7 +297,7 @@ export const AIRCRAFT_DATA = [
     desc: { es: 'Entrenador a reacción de ala recta con depósitos en las puntas. Estable a baja velocidad para ser un jet.', en: 'Straight-wing jet trainer with tip tanks. Stable at low speed for a jet.' },
     difficulty: 3, aerobatic: 3, channels: 7,
     mass: 15, span: 2.3, root: 0.58, tip: 0.33, sweep: 6, dihedral: 2, washout: 1.5, wingPos: 'low', airfoil: 'warbird',
-    length: 2.35, fuseW: 0.24, fuseH: 0.3, fuseShape: 'jet', canopy: 'tandem', features: ['tipTanks', 'sideIntakes'],
+    length: 2.8, fuseW: 0.24, fuseH: 0.3, fuseShape: 'jet', canopy: 'tandem', features: ['tipTanks', 'sideIntakes'],
     ailerons: { from: 0.55, to: 0.93, chord: 0.24, max: 10 }, flaps: { from: 0.1, to: 0.52, chord: 0.26, max: 40 },
     tail: { vh: 0.5, vv: 0.07, elevMax: 14, rudMax: 25, sweepH: 15, sweepV: 35, arm: 0.42 },
     prop: { type: 'turbine', power: 0, thrust: 160, exitSpeed: 260, rpm: 112000, capacity: 3000, drain: 480, spool: 2.6, idle: 0.3 },
