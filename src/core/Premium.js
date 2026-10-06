@@ -32,6 +32,8 @@ export class Premium {
   /** Detecta si el juego se sirve con la API de licencias. */
   async probe() {
     if (this.server !== undefined) return this.server;
+    // GitHub Pages es solo estático: no hay API que consultar
+    if (/.github.io$/.test(location.hostname)) { this.server = null; return null; }
     try {
       const r = await fetch('api/premium/status', { cache: 'no-store' });
       const j = r.ok ? await r.json() : null;
