@@ -26,8 +26,9 @@ void main() {
 }`;
 
 class ParticlePool {
-  constructor(max, blending = THREE.NormalBlending) {
+  constructor(max, blending = THREE.NormalBlending, drag = 1.5) {
     this.max = max;
+    this.drag = drag;
     this.pos = new Float32Array(max * 3);
     this.vel = new Float32Array(max * 3);
     this.col = new Float32Array(max * 4);
@@ -67,7 +68,7 @@ class ParticlePool {
       this.life[i] -= dt;
       const k = i * 3;
       this.vel[k + 1] -= this.gravity[i] * dt;
-      const drag = Math.exp(-1.5 * dt);
+      const drag = Math.exp(-this.drag * dt);
       this.vel[k] *= drag; this.vel[k + 1] *= this.gravity[i] > 0 ? 1 : drag; this.vel[k + 2] *= drag;
       this.pos[k] += this.vel[k] * dt; this.pos[k + 1] += this.vel[k + 1] * dt; this.pos[k + 2] += this.vel[k + 2] * dt;
       if (env && this.gravity[i] > 0) {
@@ -99,7 +100,10 @@ export class Effects {
     this.dust = new ParticlePool(n);
     this.bits = new ParticlePool(Math.round(n * 0.6));
     this.thermalBits = new ParticlePool(300);
-    this.group.add(this.dust.points, this.bits.points, this.thermalBits.points);
+    // humo acrobático: estela larga que deriva con el viento y se disipa
+    this.smokePool = new ParticlePool(Math.round(1500 * Math.max(0.5, Math.min(1.2, quality))), THREE.NormalBlending, 0.08);
+    this.group.add(this.dust.points, this.bits.points, this.thermalBits.points, this.smokePool.points);
+    this.smokeAcc = 0;
     // sombra difusa
     const shadowMat = new THREE.MeshBasicMaterial({ map: softDot('0,0,0'), transparent: true, depthWrite: false, opacity: 0.5, polygonOffset: true, polygonOffsetFactor: -4 });
     this.blob = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), shadowMat);
@@ -161,6 +165,28 @@ export class Effects {
   }
 
   /** Ayuda visual de térmicas para principiantes: semillas/vilanos que ascienden. */
+  /**
+   * Estela de humo desde la cola (pos = salida del humo en el mundo, vel = velocidad del avión).
+   * Se emite por distancia recorrida para que la estela sea continua a cualquier velocidad.
+   */
+  smoke(pos, vel, wind, dt, span) {
+    const v = Math.hypot(vel.x, vel.y, vel.z);
+    const spacing = Math.max(0.2, span * 0.12);
+    this.smokeAcc += (v * dt) / spacing + dt * 8;
+    let n = Math.min(40, Math.floor(this.smokeAcc));
+    this.smokeAcc -= n;
+    // tamaño en unidades del sombreador de puntos (≈ 3,3 × diámetro en metros)
+    const size0 = Math.max(1.1, span * 1.05);
+    for (let i = 0; i < n; i++) {
+      // repartidas a lo largo del tramo recorrido en este fotograma
+      const f = (i + Math.random()) / Math.max(1, n);
+      const x = pos.x - vel.x * dt * f, y = pos.y - vel.y * dt * f, z = pos.z - vel.z * dt * f;
+      const j = 0.6;
+      this.smokePool.spawn(x, y, z, wind.x * 0.9 + (Math.random() - 0.5) * j, 0.15 + (Math.random() - 0.5) * j, wind.z * 0.9 + (Math.random() - 0.5) * j,
+        7 + Math.random() * 3, 0.96, 0.96, 0.95, 0.42, size0, size0 * 0.5);
+    }
+  }
+
   thermalHints(weather, center, dt) {
     this.thermalTimer += dt;
     if (this.thermalTimer < 0.08) return;
@@ -266,6 +292,7 @@ export class Effects {
     this.dust.update(dt, env);
     this.bits.update(dt, env);
     this.thermalBits.update(dt, null);
+    this.smokePool.update(dt, null);
     for (let i = this.debris.length - 1; i >= 0; i--) {
       const d = this.debris[i];
       d.life -= dt;
@@ -285,12 +312,12 @@ export class Effects {
   }
 
   reset() {
-    this.dust.clear(); this.bits.clear(); this.thermalBits.clear();
+    this.dust.clear(); this.bits.clear(); this.thermalBits.clear(); this.smokePool.clear();
     this.clearDebris();
   }
 
   dispose() {
-    this.dust.dispose(); this.bits.dispose(); this.thermalBits.dispose();
+    this.dust.dispose(); this.bits.dispose(); this.thermalBits.dispose(); this.smokePool.dispose();
     this.blob.geometry.dispose(); this.blob.material.dispose();
     this.clearDebris();
     this.setMarkers([]);

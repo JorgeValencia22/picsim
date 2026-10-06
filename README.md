@@ -122,6 +122,15 @@ pueblo rural. Terreno por bloques con 3 niveles de detalle y faldones, vegetaci�
 y balanceo por viento, objetos fusionados por bloques (culling), agua animada, personas que miran el
 avión, mangas de viento y banderas orientadas por el viento.
 
+Vida del escenario (Configuración → Gráficos → Vida en el escenario):
+- **Otros aviones en el aire** (0–3): compañeros del club que vuelan circuitos con la misma física
+  que el jugador, gobernados por el piloto automático (solo en vuelo libre). Una prueba automática
+  vuela las 12 aeronaves del grupo durante 2 minutos sin caídas. No emiten sonido ni colisionan con
+  el avión del jugador.
+- **Animales, vehículos y aves**: rebaños de vacas y ovejas que pastan y huyen si el avión pasa bajo,
+  autos que circulan por los caminos y bandadas que planean en círculo y se dispersan al acercarse.
+- **Humo acrobático** (tecla `1` o botón «Humo»): estela continua desde la cola que deriva con el viento.
+
 ### Meteorología
 Viento con gradiente vertical, ráfagas, turbulencia 3D advectada, ascendencia de ladera calculada con
 el gradiente del terreno, rotores de sotavento, térmicas con ciclo de vida (sólo de día), densidad por

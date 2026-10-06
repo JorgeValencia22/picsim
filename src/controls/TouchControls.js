@@ -25,6 +25,7 @@ const ICONS = {
   airbrake: '<svg viewBox="0 0 24 24"><path d="M3 15h18M9 15l3-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   instruments: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 12l4-3" stroke="currentColor" stroke-width="2"/></svg>',
   dualRate: '<svg viewBox="0 0 24 24"><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" font-family="sans-serif">D/R</text></svg>',
+  smoke: '<svg viewBox="0 0 24 24"><path d="M3 14c3 0 3-3 6-3s3 3 6 3 3-3 6-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="5" cy="8" r="1.6" fill="currentColor"/></svg>',
   hud: '<svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h8" stroke="currentColor" stroke-width="2"/></svg>',
 };
 
@@ -66,7 +67,7 @@ export class TouchControls {
     this.root.appendChild(el);
     this.el = el;
     this.sticks = { left: el.querySelector('.tstick.left'), right: el.querySelector('.tstick.right') };
-    const topBtns = [['pause', L('Pausa', 'Pause')], ['camera', L('Cámara', 'Camera')], ['reset', L('Reiniciar', 'Reset')], ['dualRate', 'D/R'], ['hud', 'HUD'], ['instruments', L('Instrumentos', 'Instruments')]];
+    const topBtns = [['pause', L('Pausa', 'Pause')], ['camera', L('Cámara', 'Camera')], ['reset', L('Reiniciar', 'Reset')], ['dualRate', 'D/R'], ['smoke', L('Humo', 'Smoke')], ['hud', 'HUD'], ['instruments', L('Instrumentos', 'Instruments')]];
     const sideBtns = [['launch', L('Lanzar', 'Launch')], ['flaps', 'Flaps'], ['gear', L('Tren', 'Gear')], ['airbrake', L('Frenos aire', 'Airbrake')], ['brake', L('Freno', 'Brake')]];
     const mk = (parent, [id, label]) => {
       const b = document.createElement('button');

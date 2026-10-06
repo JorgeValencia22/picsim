@@ -39,6 +39,7 @@ export const DEFAULT_KEYS = {
   zoomOut: ['Minus', 'NumpadSubtract'],
   cameraTrack: ['KeyT', ''],
   dualRate: ['KeyY', ''],
+  smoke: ['Digit1', ''],
   trimAileronLeft: ['KeyJ', 'Numpad4'],
   trimAileronRight: ['KeyK', 'Numpad6'],
   trimElevatorUp: ['KeyM', 'Numpad2'],
@@ -72,6 +73,7 @@ export const ACTION_LABELS = {
   zoomOut: { es: 'Zoom −', en: 'Zoom −' },
   cameraTrack: { es: 'Seguimiento de cámara', en: 'Camera tracking' },
   dualRate: { es: 'Dual rate (alto/bajo)', en: 'Dual rate (high/low)' },
+  smoke: { es: 'Humo acrobático', en: 'Aerobatic smoke' },
   trimAileronLeft: { es: 'Trim alerón ←', en: 'Aileron trim ←' },
   trimAileronRight: { es: 'Trim alerón →', en: 'Aileron trim →' },
   trimElevatorUp: { es: 'Trim profundidad ↑ (morro arriba)', en: 'Elevator trim ↑ (nose up)' },
@@ -99,7 +101,7 @@ export function defaultAxisMap() {
 export function defaultSettings() {
   return {
     version: 2,
-    graphics: { preset: 'medium', ...structuredClone(GRAPHICS_PRESETS.medium), dynamicResolution: false, targetFps: 60, showFps: false, realistic: false },
+    graphics: { preset: 'medium', ...structuredClone(GRAPHICS_PRESETS.medium), dynamicResolution: false, targetFps: 60, showFps: false, realistic: false, traffic: 2, life: 1 },
     controls: {
       mode: 2,
       keyboard: { bindings: structuredClone(DEFAULT_KEYS), analogRate: 3.2, returnRate: 5, throttleRate: 0.55 },

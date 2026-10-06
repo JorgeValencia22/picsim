@@ -290,3 +290,42 @@ export function personGeometry() {
   ]);
   return { upper, lower, head };
 }
+
+/** Vaca u oveja (eje largo en +X, patas apoyadas en y = 0), con cuerpos redondeados. */
+export function animalGeometry(kind) {
+  const parts = [];
+  const blob = (sx, sy, sz, color, x, y, z, rz = 0) => ({ geo: colored(new THREE.SphereGeometry(1, 10, 7), color), matrix: M(x, y, z, 0, sx, sy, sz, 0, rz) });
+  if (kind === 'cow') {
+    parts.push(blob(1.0, 0.48, 0.42, '#f2efe9', 0, 1.08, 0));
+    parts.push(blob(0.42, 0.36, 0.43, '#2b2420', -0.3, 1.18, 0.02));
+    parts.push(blob(0.34, 0.3, 0.38, '#2b2420', 0.55, 1.12, -0.03));
+    parts.push(blob(0.3, 0.24, 0.2, '#2b2420', 1.18, 1.22, 0, -0.5));
+    parts.push(blob(0.13, 0.11, 0.15, '#d9a7a0', 1.4, 1.08, 0));
+    parts.push(cyl(0.025, 0.02, 0.22, '#d8cfc0', 1.1, 1.42, 0, 5, Math.PI / 2));
+    for (const [x, z] of [[-0.65, -0.24], [-0.65, 0.24], [0.62, -0.24], [0.62, 0.24]]) parts.push(cyl(0.085, 0.07, 0.72, '#3a2f29', x, 0.36, z, 6));
+    parts.push(cyl(0.025, 0.015, 0.7, '#2b2420', -1.0, 0.8, 0, 4, 0, 0.25));
+  } else {
+    parts.push(blob(0.56, 0.36, 0.36, '#ecebe4', 0, 0.68, 0));
+    parts.push(blob(0.2, 0.17, 0.15, '#262321', 0.6, 0.8, 0, -0.4));
+    parts.push(blob(0.08, 0.04, 0.12, '#262321', 0.52, 0.92, 0));
+    for (const [x, z] of [[-0.3, -0.16], [-0.3, 0.16], [0.3, -0.16], [0.3, 0.16]]) parts.push(cyl(0.04, 0.035, 0.42, '#262321', x, 0.21, z, 5));
+  }
+  return mergeColored(parts);
+}
+
+/** Automóvil (eje largo en +X) del color indicado. */
+export function carGeometry(color) {
+  return mergeColored(propParts({ type: 'car', color }));
+}
+
+/** Ave en planeo: dos alas en «V» abierta (envergadura ≈ 1 m, la escala la fija la instancia). */
+export function birdGeometry() {
+  const wing = (s) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([0.12, 0, 0, -0.12, 0, 0, -0.05, 0.12, s * 0.5], 3));
+    g.computeVertexNormals();
+    return { geo: colored(g, '#1f1d1b'), matrix: new THREE.Matrix4() };
+  };
+  const body = { geo: colored(new THREE.BoxGeometry(0.28, 0.05, 0.06), '#1f1d1b'), matrix: new THREE.Matrix4() };
+  return mergeColored([wing(1), wing(-1), body]);
+}

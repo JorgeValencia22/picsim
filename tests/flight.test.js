@@ -288,3 +288,20 @@ test('trims de emisora: desplazan la deflexión de la superficie sin tocar el st
   run(ac, world, 0.5, (a) => { a.cmd.elevator = 0; a.cmd.throttle = 0.6; });
   assert.ok(Math.abs(ac.defl.elevator - (0.1 + ac.spec.trim.elevator)) < 0.01);
 });
+
+test('tráfico: cada avión del club vuela 2 min de circuito con el piloto automático sin caer', async () => {
+  const { TRAFFIC_POOL, makeTrafficPlane, respawnTrafficPlane, stepTrafficPlane } = await import('../src/core/Traffic.js');
+  const world = flatWorld({ wind: [2, 0, 1] });
+  const fails = [];
+  for (const id of TRAFFIC_POOL) {
+    for (const i of [0, 2]) {
+      const p = makeTrafficPlane(spec(id), i, 0, -150);
+      respawnTrafficPlane(p, i * 2, world);
+      const n = Math.round(120 / DT);
+      for (let s = 0; s < n; s++) {
+        if (stepTrafficPlane(p, DT, world)) { fails.push(`${id}#${i} a los ${(s * DT).toFixed(0)} s`); break; }
+      }
+    }
+  }
+  assert.deepEqual(fails, []);
+});

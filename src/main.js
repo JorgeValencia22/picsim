@@ -48,7 +48,7 @@ class App {
       const preset = recommendedPreset();
       Object.assign(this.settings.graphics, structuredClone(GRAPHICS_PRESETS[preset]), { preset });
       delete this.settings.graphics.label;
-      if (isMobile()) { this.settings.graphics.dynamicResolution = true; this.settings.graphics.targetFps = 60; }
+      if (isMobile()) { this.settings.graphics.dynamicResolution = true; this.settings.graphics.targetFps = 60; this.settings.graphics.traffic = 1; }
     }
     // mejora de pago «Render realista»: sin licencia nunca se activa
     this.premium = new Premium(this.storage);
@@ -247,6 +247,10 @@ class App {
         break;
       }
       case 'reset': this.sim.resetAircraft(); break;
+      case 'smoke':
+        this.sim.smokeOn = !this.sim.smokeOn;
+        this.ui.toast(this.sim.smokeOn ? L('Humo activado', 'Smoke on') : L('Humo desactivado', 'Smoke off'), 'info', 1100);
+        break;
       case 'hud': this.settings.ui.hud = !this.settings.ui.hud; this.hud.applyPrefs(); this.saveSettings(); break;
       case 'instruments': this.settings.ui.instruments = !this.settings.ui.instruments; this.hud.applyPrefs(); this.saveSettings(); break;
       case 'launch': if (!this.sim.launch() && ac?.engine.type !== 'none' && !ac.held) { /* sin efecto en vuelo */ } break;

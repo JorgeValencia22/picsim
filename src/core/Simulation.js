@@ -17,6 +17,8 @@ import { SkySystem } from '../render/SkySystem.js';
 import { AircraftModel } from '../render/AircraftModel.js';
 import { shapeFor } from '../render/AircraftShapes.js';
 import { Effects } from '../render/Effects.js';
+import { AmbientLife } from '../render/AmbientLife.js';
+import { TrafficSystem } from './Traffic.js';
 import { FlightAssist } from '../controls/FlightAssist.js';
 import { ManeuverDetector, MANEUVERS } from '../gameplay/ManeuverDetector.js';
 import { LandingEvaluator } from '../gameplay/LandingEvaluator.js';
@@ -44,6 +46,7 @@ export class Simulation {
     this.envRenderer = null;
     this.sky = new SkySystem(this.scene, this.renderer.renderer, this.skyQuality());
     this.effects = new Effects(this.scene, this.settings.graphics.effects);
+    this.traffic = new TrafficSystem(this.scene, this.registry);
     this.acc = 0;
     this.simTime = 0;
     this.aircraft = null;
@@ -76,6 +79,7 @@ export class Simulation {
     const g = this.settings.graphics;
     this.envRenderer = new EnvironmentRenderer(this.env, { terrainDetail: g.terrainDetail ?? 1, vegetation: g.vegetation ?? 0.7, shadows: g.shadows !== 'off' });
     this.scene.add(this.envRenderer.group);
+    this.buildLife();
     onProgress?.(0.75, L('Preparando cámaras…', 'Preparing cameras…'));
     await nextFrame();
     return true;
@@ -125,6 +129,7 @@ export class Simulation {
     this.maneuvers = new ManeuverDetector(this.aircraft.spec.perf.stallSpeed);
     this.mode = cfg.mode || 'flight';
     this.spawn(cfg.launch || 'runway');
+    this.setupTraffic();
     onProgress?.(1, '');
     return envChanged;
   }
@@ -149,6 +154,13 @@ export class Simulation {
     this.bus.emit('aircraftChanged', spec);
   }
 
+  /** Otros aviones del club volando circuitos (solo en vuelo libre, no en misiones ni en el menú). */
+  setupTraffic() {
+    const n = this.mode === 'flight' && !this.mission ? (this.settings.graphics.traffic ?? 0) : 0;
+    const g = this.settings.graphics;
+    this.traffic.setup({ env: this.env, world: this.world, count: n, excludeId: this.aircraft?.spec.baseId, shadows: g.shadows !== 'off', realistic: !!g.realistic });
+  }
+
   /** Reconstruye solo el modelo visual (p. ej. al activar el render realista); la física no se toca. */
   rebuildModel() {
     if (!this.model || !this.aircraft || this.mode === 'replay') return;
@@ -159,6 +171,7 @@ export class Simulation {
     this.model = new AircraftModel(spec, this.currentLivery, { shadows: q.shadows !== 'off', realistic: !!q.realistic });
     this.model.lastWheelSpeed = lastWheel;
     this.scene.add(this.model.root);
+    this.setupTraffic();
   }
 
   activeLivery(id) {
@@ -393,6 +406,7 @@ export class Simulation {
       if (isMenu) this.menuAutopilot(PHYSICS_DT);
       if (this.bungee) this.applyBungee();
       ac.step(PHYSICS_DT, this.world);
+      if (!isMenu) this.traffic.step(PHYSICS_DT);
       this.acc -= PHYSICS_DT;
       this.simTime += PHYSICS_DT;
       steps++;
@@ -653,6 +667,9 @@ export class Simulation {
       }, dt);
     }
     if (!ac && !this.player) return;
+    const showTraffic = this.mode === 'flight';
+    for (const tp of this.traffic.planes) tp.model.root.visible = showTraffic;
+    if (showTraffic) this.traffic.render(this.alpha ?? 1, dt, this.simTime, this.sky.night);
     const target = {
       pos: this.renderState.pos, quat: this.renderState.quat, vel: this.renderState.vel,
       span: (this.aircraft?.spec || this.replaySpec).span,
@@ -676,9 +693,16 @@ export class Simulation {
     const w = this.weather;
     const windVec = { x: w.windDirX * w.cfg.windSpeed * w.gust, z: w.windDirZ * w.cfg.windSpeed * w.gust };
     this.envRenderer?.update(dt, cam, windVec, this.renderState.pos);
+    this.life?.update(dt, this.renderState.pos, this.simTime);
     this.sky.update(dt, cam, windVec);
     this.sky.followTarget(this.renderState.pos);
     this.effects.update(dt, this.env);
+    // humo acrobático desde la cola (tecla 1 / botón Humo)
+    if (this.smokeOn && ac && this.mode === 'flight' && !this.paused && !ac.destroyed) {
+      const sp = ac.spec;
+      _v3.set(sp.cgX - sp.length * 1.02, 0, 0).applyQuaternion(this.renderState.quat).add(this.renderState.pos);
+      this.effects.smoke(_v3, this.renderState.vel, windVec, dt, sp.span);
+    }
     const shadowsOn = this.settings.graphics.shadows !== 'off';
     this.effects.updateBlob(this.env, this.renderState.pos, target.span, true, shadowsOn ? 0.45 : 1);
     if ((this.weather.cfg.thermalHints && this.settings.physics.assist !== 'expert') || this.mission?.m.setup?.weather?.thermalHints) {
@@ -805,6 +829,16 @@ export class Simulation {
     if (changed.audio) this.audio.applyVolumes();
   }
 
+  /** Animales, vehículos y aves del escenario (solo visual). */
+  buildLife() {
+    this.life?.dispose();
+    this.life = null;
+    const g = this.settings.graphics;
+    if (!this.env || (g.life ?? 1) <= 0) return;
+    this.life = new AmbientLife(this.env, { density: g.life ?? 1, birds: (g.effects ?? 1) > 0.4 });
+    this.scene.add(this.life.group);
+  }
+
   /** Reconstruye el escenario (cambio de calidad de vegetación o de detalle del terreno). */
   async rebuildEnvironmentVisuals() {
     if (!this.env) return;
@@ -812,6 +846,7 @@ export class Simulation {
     const g = this.settings.graphics;
     this.envRenderer = new EnvironmentRenderer(this.env, { terrainDetail: g.terrainDetail ?? 1, vegetation: g.vegetation ?? 0.7, shadows: g.shadows !== 'off' });
     this.scene.add(this.envRenderer.group);
+    this.buildLife();
   }
 
   get presets() { return GRAPHICS_PRESETS; }

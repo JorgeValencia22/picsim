@@ -82,6 +82,11 @@ export class SettingsScreen extends Screen {
       field(L('Calidad de texturas', 'Texture quality'), segmented([{ value: 0.5, label: L('Baja', 'Low') }, { value: 1, label: L('Media', 'Medium') }, { value: 1.5, label: L('Alta', 'High') }, { value: 2, label: 'Ultra' }], g.textureQuality, (v) => set('textureQuality', true)(Number(v)))),
       field(L('Efectos ambientales', 'Ambient effects'), range(0.3, 1.6, 0.1, g.effects, set('effects'), pct), L('Partículas, lluvia y aves', 'Particles, rain and birds')),
       field(L('Nubes', 'Clouds'), range(0, 1.2, 0.1, g.clouds, set('clouds'), pct)),
+      h('div', { class: 'section-title' }, L('Vida en el escenario', 'Living scenery')),
+      field(L('Otros aviones en el aire', 'Other aircraft in the air'), segmented([0, 1, 2, 3].map((n) => ({ value: n, label: String(n) })), g.traffic ?? 0, (v) => { g.traffic = Number(v); this.save('graphics'); a.sim.setupTraffic(); }),
+        L('Compañeros del club volando circuitos con física real (solo en vuelo libre)', 'Club mates flying circuits with real physics (free flight only)')),
+      field(L('Animales, vehículos y aves', 'Animals, vehicles and birds'), range(0, 1.5, 0.25, g.life ?? 1, (v) => { g.life = v; this.save('graphics'); clearTimeout(this.lifeT); this.lifeT = setTimeout(() => a.sim.buildLife(), 300); }, pct),
+        L('Rebaños que huyen si pasas bajo, autos por los caminos, bandadas', 'Herds that flee from low passes, cars on the roads, flocks')),
       field(L('Reflejos del entorno', 'Environment reflections'), toggle(g.envMap, set('envMap'))),
       field(L('Mostrar FPS y rendimiento', 'Show FPS and performance'), toggle(g.showFps, (v) => { g.showFps = v; this.save('graphics'); })));
     draw();
