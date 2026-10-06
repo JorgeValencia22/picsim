@@ -123,8 +123,12 @@ export class AircraftModel {
   buildMaterials() {
     const L = this.livery;
     const finish = { gloss: [0.32, 0.05], matte: [0.78, 0.0], metallic: [0.28, 0.65] }[L.finish] || [0.4, 0.05];
+    // render realista: pintura con capa de barniz (clearcoat) y reflejos más marcados
+    const real = !!this.opts.realistic;
     const mk = (map, color = '#ffffff') => {
-      const mat = new THREE.MeshStandardMaterial({ map, color, roughness: finish[0], metalness: finish[1] });
+      const mat = real
+        ? new THREE.MeshPhysicalMaterial({ map, color, roughness: finish[0], metalness: finish[1], clearcoat: L.finish === 'matte' ? 0.15 : 0.9, clearcoatRoughness: L.finish === 'matte' ? 0.6 : 0.06, envMapIntensity: 1.25 })
+        : new THREE.MeshStandardMaterial({ map, color, roughness: finish[0], metalness: finish[1] });
       this.disposables.push(mat);
       return mat;
     };
@@ -434,6 +438,13 @@ export class AircraftModel {
       const grp = groupFor(((c.from ?? 0) + (c.to ?? 1)) / 2);
       if (grp) this.detachable[grp].push(mesh);
       this.registerControl(surf, c, pivot, p0, p1);
+      // palas compensadoras («spades») bajo los alerones de los acrobáticos de competición
+      if (c.type === 'aileron' && this.extras.has('spades') && surf.kind === 'wing' && !surf.lower) this.addSpade(surf, c, pivot, p0, hc);
+      // cuerno de compensación: el timón y la profundidad sobresalen por la punta con un saliente
+      if ((c.type === 'rudder' || c.type === 'elevator') && this.extras.has('hornBalance') && !surf.roundTip && (c.to ?? 1) > 0.9) {
+        const horn = this.addMesh(this.loft(surf, 1, 1.09, Math.max(0, hc - 0.2), 1, p0), ctlMat, pivot);
+        if (grp) this.detachable[grp].push(horn);
+      }
     }
     // spoilers / aerofrenos: placa sobre el extradós que se levanta
     const sp = (surf.controls || []).find((c) => c.type === 'spoiler');
@@ -451,6 +462,18 @@ export class AircraftModel {
       plate.position.set(-chord * 0.07, 0, len / 2);
       this.spoilers.push({ pivot, dir });
     }
+  }
+
+  /** Pala compensadora: placa de carbono bajo el alerón, unida a él por un brazo (gira con el alerón). */
+  addSpade(surf, c, pivot, p0, hc) {
+    const eta = (c.from ?? 0) + ((c.to ?? 1) - (c.from ?? 0)) * 0.32;
+    const ch = chordAt(surf, eta);
+    const h = this.hingePoint(surf, eta, hc).sub(p0);
+    const drop = ch * 0.26;
+    const arm = this.addMesh(new THREE.BoxGeometry(ch * 0.05, drop, Math.max(0.002, ch * 0.012)), this.mats.frame, pivot);
+    arm.position.copy(h).add(new THREE.Vector3(ch * 0.02, -drop / 2, 0));
+    const plate = this.addMesh(new THREE.BoxGeometry(ch * 0.34, Math.max(0.002, ch * 0.01), ch * 0.24), this.mats.frame, pivot);
+    plate.position.copy(h).add(new THREE.Vector3(ch * 0.1, -drop, 0));
   }
 
   registerControl(surf, c, pivot, p0, p1) {
@@ -815,6 +838,11 @@ export class AircraftModel {
         attach.y = (pr.yc - pr.bot * 0.8) * H;
         if (gp.role === 'main') attach.z = Math.sign(gp.z) * Math.min(Math.abs(gp.z), W * pr.w * 0.7);
       }
+      // rueda de cola: la pata sale de la parte baja del cono de cola (no flota bajo él)
+      if (this.shape && gp.role === 'tail') {
+        const pr = this.fuseProfile(clamp(gp.x / spec.length - 0.02, 0, 1));
+        attach.set(contact.x + r * 0.8, (pr.yc - pr.bot * 0.6) * H, 0);
+      }
       const pivot = new THREE.Group();
       pivot.position.copy(attach);
       this.root.add(pivot);
@@ -860,6 +888,8 @@ export class AircraftModel {
         }
         const pg = new THREE.LatheGeometry(pts, 18);
         pg.rotateZ(-Math.PI / 2);
+        orientOutward(pg);
+        pg.computeVertexNormals();
         const pant = this.addMesh(pg, this.mats.paint, steer);
         pant.scale.set(r * 1.75, r * 1.0, r * 0.62);
         pant.position.copy(hub).add(new THREE.Vector3(-r * 0.35, r * 0.18, 0));
@@ -1129,6 +1159,27 @@ export class AircraftModel {
         c.position.set(bx(t), (p.yc + p.top * 0.15) * H, sd * (W * p.w + W * 0.18));
         const head = this.addMesh(new THREE.BoxGeometry(H * 0.3, H * 0.3, W * 0.16), this.mats.dark);
         head.position.set(bx(t), (p.yc + p.top * 0.15) * H, sd * (W * p.w + W * 0.45));
+      }
+    }
+    // escapes cortos que asoman bajo el capó (motores de cilindros opuestos de los acrobáticos)
+    if (X.has('exhaustStubs')) {
+      const t = 0.13, p = P(t);
+      for (const sd of [1, -1]) {
+        const r = Math.max(0.004, H * 0.09);
+        const pipe = this.addMesh(new THREE.CylinderGeometry(r, r * 1.15, H * 0.5, 10, 1, true), this.mats.nozzle);
+        pipe.position.set(bx(t), (p.yc - p.bot * 0.92) * H, sd * W * p.w * 0.42);
+        pipe.rotation.z = -0.5;
+        this.mouth(bx(t) - H * 0.12, (p.yc - p.bot * 0.92) * H - H * 0.22, sd * W * p.w * 0.42, r * 0.9, r * 0.9).rotation.set(Math.PI / 2, 0, 0);
+      }
+    }
+    // motor radial: culatas de los 9 cilindros visibles tras el anillo del capó
+    if (X.has('radialCyls')) {
+      const R = Math.min(W, H) * 0.7;
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2;
+        const cyl = this.addMesh(new THREE.CylinderGeometry(R * 0.13, R * 0.16, R * 0.38, 8), this.mats.metal);
+        cyl.position.set(this.cgX - 0.012 * L, Math.sin(a) * R * 0.7, Math.cos(a) * R * 0.7);
+        cyl.rotation.x = a - Math.PI / 2;
       }
     }
     // entradas de aire de refrigeración a ambos lados del cono

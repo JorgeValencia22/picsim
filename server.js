@@ -1,11 +1,13 @@
 /**
- * Servidor estático sin dependencias para RC FLIGHT SIMULATOR.
+ * Servidor sin dependencias para RC FLIGHT SIMULATOR: archivos estáticos + API de la mejora
+ * «Render realista» (canje de códigos de un solo uso y pagos con Stripe; ver server/premium.js).
  * Uso: node server.js [puerto]   (por defecto 8080)  →  http://localhost:8080
  */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createPremiumApi } from './server/premium.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
@@ -14,10 +16,12 @@ const TYPES = {
   '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon', '.md': 'text/markdown; charset=utf-8', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json',
 };
-// node_modules y tests no se publican
-const BLOCKED = ['node_modules', 'tests', '.git'];
+// no se publican: dependencias, pruebas, código del servidor ni la base de licencias
+const BLOCKED = ['node_modules', 'tests', '.git', 'server', 'data'];
+const premium = createPremiumApi(ROOT);
 
-http.createServer((req, res) => {
+http.createServer(async (req, res) => {
+  if (await premium(req, res)) return;
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
   if (urlPath === '/') urlPath = '/index.html';
   const file = path.normalize(path.join(ROOT, urlPath));

@@ -12,8 +12,23 @@ En Android (Chrome) usa «Instalar aplicación»; en iPhone (Safari) usa Compart
 inicio»: se abre a pantalla completa, en horizontal y funciona sin conexión tras la primera visita.
 
 También está listo para **Render**: en el panel de Render elige *New → Blueprint* y el repositorio;
-`render.yaml` compila con `node tools/build.mjs` y publica `dist/` como sitio estático.
+`render.yaml` arranca `node server.js`, que sirve el juego y la API de la mejora de pago.
 Para la **Play Store** puede empaquetarse la PWA como *Trusted Web Activity* (p. ej. con Bubblewrap).
+
+## Mejora de pago «Render realista» (5 USD)
+
+Mejora **solo visual** (Configuración → Gráficos): búfer HDR con MSAA, bloom, curva fílmica ACES,
+gradación de color, perspectiva aérea, sombras de alta resolución y pintura con barniz. No cambia la
+física ni la sensación de vuelo. Coste medido en un ThinkPad T480 (gráfica integrada, 1920×1080):
+29,5 ms → 37,1 ms por fotograma.
+
+- **Con servidor** (`node server.js`, p. ej. Render como servicio web): la compra usa Stripe Checkout
+  (`STRIPE_SECRET_KEY`) y los códigos de descuento se canjean en el servidor, que los marca como usados
+  para siempre en todos los dispositivos (registro en `LICENSE_DB`; necesita disco persistente).
+- **Sin servidor** (GitHub Pages): no hay pasarela de pago y el código queda marcado como usado solo en
+  ese navegador. Cualquier desbloqueo hecho en el cliente puede saltarse con las herramientas del
+  navegador: la protección real depende del servidor.
+- Los códigos nunca se guardan en claro: solo su SHA-256 (`PREMIUM_CODE_HASHES` en el servidor).
 
 ## Instalación y ejecución
 

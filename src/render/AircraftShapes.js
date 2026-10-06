@@ -114,11 +114,35 @@ export const SHAPES = {
     spinner: { len: 1.3 },
     extras: ['tubeGear'],
   },
-  extra300: AEROBAT({ c0: 0.26, c1: 0.6, ch: 0.9 }),
-  edge540: { ...AEROBAT({ c0: 0.27, c1: 0.52, ch: 0.95 }), n: [2.2, 3.2] },
-  cap232: AEROBAT({ c0: 0.28, c1: 0.55, ch: 0.86 }),
-  su26: RADIAL({ c0: 0.3, c1: 0.62, ch: 0.66 }),
-  yak55: RADIAL({ c0: 0.32, c1: 0.56, ch: 0.7 }),
+  // Extra 300L: biplaza en tándem, cúpula larga de una pieza, costados planos (tubo y tela)
+  extra300: {
+    ...AEROBAT({ c0: 0.25, c1: 0.62, ch: 0.88, extras: ['spades', 'hornBalance', 'exhaustStubs'] }),
+    n: [2.3, 3.4],
+    st: [
+      [0, 0.74, 0.62, -0.64], [0.05, 0.95, 0.86, -0.94], [0.16, 1, 1.0, -1.06],
+      [0.3, 1, 1.02, -1.08], [0.52, 0.9, 1.0, -0.94], [0.72, 0.58, 0.88, -0.56],
+      [0.9, 0.28, 0.76, -0.16], [1, 0.11, 0.7, 0.06],
+    ],
+  },
+  // Edge 540: monoplaza de carreras, fuselaje estrecho y alto, cúpula alta y corta
+  edge540: {
+    ...AEROBAT({ c0: 0.27, c1: 0.5, ch: 1.0, extras: ['spades', 'hornBalance', 'exhaustStubs'] }),
+    n: [2.2, 3.4],
+    st: [
+      [0, 0.72, 0.6, -0.62], [0.05, 0.92, 0.86, -0.92], [0.16, 0.97, 1.0, -1.04],
+      [0.3, 0.92, 1.0, -1.04], [0.5, 0.8, 0.96, -0.9], [0.72, 0.52, 0.86, -0.54],
+      [0.9, 0.26, 0.74, -0.15], [1, 0.1, 0.68, 0.06],
+    ],
+  },
+  // CAP 232: ala baja, cúpula adelantada sobre el ala y lomo que cae suave
+  cap232: {
+    ...AEROBAT({ c0: 0.24, c1: 0.5, ch: 0.84, extras: ['spades', 'exhaustStubs'] }),
+    n: [2.3, 3.2],
+  },
+  // Su-26: radial M-14P de gran diámetro, cúpula burbuja grande y fuselaje que se afila
+  su26: { ...RADIAL({ c0: 0.29, c1: 0.62, ch: 0.66, extras: ['spades', 'radialCyls'] }), spinner: { len: 1.1 } },
+  // Yak-55: ala media gruesa, cúpula en burbuja más corta y capó radial
+  yak55: RADIAL({ c0: 0.32, c1: 0.55, ch: 0.72, extras: ['radialCyls'] }),
   pitts: {
     n: [2.2, 2.4],
     st: [

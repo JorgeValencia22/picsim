@@ -99,7 +99,7 @@ export function defaultAxisMap() {
 export function defaultSettings() {
   return {
     version: 2,
-    graphics: { preset: 'medium', ...structuredClone(GRAPHICS_PRESETS.medium), dynamicResolution: false, targetFps: 60, showFps: false },
+    graphics: { preset: 'medium', ...structuredClone(GRAPHICS_PRESETS.medium), dynamicResolution: false, targetFps: 60, showFps: false, realistic: false },
     controls: {
       mode: 2,
       keyboard: { bindings: structuredClone(DEFAULT_KEYS), analogRate: 3.2, returnRate: 5, throttleRate: 0.55 },

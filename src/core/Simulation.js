@@ -29,7 +29,7 @@ import { GRAPHICS_PRESETS } from '../data/settings.js';
 export const PHYSICS_DT = 1 / 240;
 const MAX_FRAME = 0.25;
 
-const _q3 = new THREE.Quaternion(), _v3 = new THREE.Vector3(), _v3b = new THREE.Vector3();
+const _q3 = new THREE.Quaternion(), _q4 = new THREE.Quaternion(), _v3 = new THREE.Vector3(), _v3b = new THREE.Vector3();
 
 export class Simulation {
   /**
@@ -139,13 +139,26 @@ export class Simulation {
     const fid = this.mode === 'menu' ? 'realistic' : this.settings.physics.fidelity;
     this.aircraft = new AircraftPhysics(spec, { fidelity: fid, damage: this.settings.physics.damage, seed: 1234 });
     const quality = this.settings.graphics;
-    this.model = new AircraftModel(spec, livery || this.activeLivery(id), { shadows: quality.shadows !== 'off' });
+    this.currentLivery = livery || this.activeLivery(id);
+    this.model = new AircraftModel(spec, this.currentLivery, { shadows: quality.shadows !== 'off', realistic: !!quality.realistic });
     this.scene.add(this.model.root);
     this.assist = new FlightAssist(spec);
     this.autopilot = new Autopilot(spec);
     this.audio.setAircraft(spec);
     this.onboardOffset = this.computeOnboardOffset(spec);
     this.bus.emit('aircraftChanged', spec);
+  }
+
+  /** Reconstruye solo el modelo visual (p. ej. al activar el render realista); la física no se toca. */
+  rebuildModel() {
+    if (!this.model || !this.aircraft || this.mode === 'replay') return;
+    const spec = this.aircraft.spec;
+    const lastWheel = this.model.lastWheelSpeed;
+    this.model.dispose();
+    const q = this.settings.graphics;
+    this.model = new AircraftModel(spec, this.currentLivery, { shadows: q.shadows !== 'off', realistic: !!q.realistic });
+    this.model.lastWheelSpeed = lastWheel;
+    this.scene.add(this.model.root);
   }
 
   activeLivery(id) {
@@ -620,7 +633,7 @@ export class Simulation {
       // estado ya aplicado por updateReplay
     } else if (ac) {
       const a = this.alpha ?? 1;
-      _q3.set(ac.prevQ.x, ac.prevQ.y, ac.prevQ.z, ac.prevQ.w).slerp(new THREE.Quaternion(ac.q.x, ac.q.y, ac.q.z, ac.q.w), a);
+      _q3.set(ac.prevQ.x, ac.prevQ.y, ac.prevQ.z, ac.prevQ.w).slerp(_q4.set(ac.q.x, ac.q.y, ac.q.z, ac.q.w), a);
       this.renderState.pos.set(ac.prevPos.x + (ac.pos.x - ac.prevPos.x) * a, ac.prevPos.y + (ac.pos.y - ac.prevPos.y) * a, ac.prevPos.z + (ac.pos.z - ac.prevPos.z) * a);
       this.renderState.quat.copy(_q3);
       this.renderState.vel.set(ac.vel.x, ac.vel.y, ac.vel.z);
@@ -718,7 +731,7 @@ export class Simulation {
     const spec = this.registry.get(meta.aircraft);
     this.replaySpec = spec;
     if (this.model) this.model.dispose();
-    this.model = new AircraftModel(spec, meta.livery, { shadows: this.settings.graphics.shadows !== 'off' });
+    this.model = new AircraftModel(spec, meta.livery, { shadows: this.settings.graphics.shadows !== 'off', realistic: !!this.settings.graphics.realistic });
     this.scene.add(this.model.root);
     this.onboardOffset = this.computeOnboardOffset(spec);
     this.audio.setAircraft(spec);
@@ -766,6 +779,7 @@ export class Simulation {
   /** Aplica cambios de configuración en caliente. */
   applySettings(changed = {}) {
     if (changed.graphics) {
+      const realChanged = !!this.renderer.gfx.realistic !== !!this.settings.graphics.realistic;
       const recreated = this.renderer.apply(this.settings.graphics);
       if (recreated) {
         this.input.attachCanvas(this.renderer.canvas);
@@ -778,6 +792,7 @@ export class Simulation {
       if (this.weather && this.env) this.sky.configure(this.weather, this.env, this.settings.graphics.drawDistance);
       this.cameras.camera.far = Math.max(1500, this.settings.graphics.drawDistance * 1.2);
       this.cameras.camera.updateProjectionMatrix();
+      if (realChanged) this.rebuildModel();
     }
     if (changed.physics && this.aircraft && this.mode === 'flight') {
       const f = this.settings.physics.fidelity;

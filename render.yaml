@@ -1,18 +1,32 @@
-# Despliegue en Render como sitio estático (Blueprint).
+# Despliegue en Render (Blueprint) como servicio web Node: sirve el juego y la API de la mejora
+# «Render realista» (pagos con Stripe y códigos de descuento de un solo uso).
+#
+# Variables a definir en el panel de Render:
+#   STRIPE_SECRET_KEY  clave secreta de Stripe (sin ella el botón de compra no aparece)
+#   PUBLIC_URL         URL pública del servicio, p. ej. https://rc-flight-simulator.onrender.com
+# LICENSE_SECRET se genera automáticamente.
+#
+# IMPORTANTE: el disco del plan gratuito se borra en cada despliegue o reinicio. Para que el
+# registro de códigos usados y compras sea permanente, añade un disco persistente (plan de pago)
+# montado en /var/data y deja LICENSE_DB apuntando a él (descomenta el bloque «disk»).
 services:
   - type: web
     name: rc-flight-simulator
-    runtime: static
-    buildCommand: node tools/build.mjs
-    staticPublishPath: dist
-    pullRequestPreviewsEnabled: false
-    headers:
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /sw.js
-        name: Cache-Control
-        value: no-cache
-      - path: /index.html
-        name: Cache-Control
-        value: no-cache
+    runtime: node
+    plan: free
+    buildCommand: echo "sin paso de compilación"
+    startCommand: node server.js
+    healthCheckPath: /index.html
+    envVars:
+      - key: LICENSE_SECRET
+        generateValue: true
+      - key: LICENSE_DB
+        value: /var/data/licenses.json
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+    # disk:
+    #   name: licencias
+    #   mountPath: /var/data
+    #   sizeGB: 1

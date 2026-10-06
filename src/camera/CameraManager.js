@@ -118,7 +118,7 @@ export class CameraManager {
         }
         if (this.tracking) {
           if (!this.initialized) this.lookTarget.copy(t.pos);
-          this.lookTarget.lerp(t.pos, damp(lerp(30, 6, sm), dt));
+          this.lookTarget.lerp(t.pos, damp(lerp(80, 15, sm), dt));
         } else if (!this.initialized) this.lookTarget.copy(t.pos);
         const dir = _v.copy(this.lookTarget).sub(cam.position);
         const dist = dir.length();

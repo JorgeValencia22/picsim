@@ -53,6 +53,8 @@ const PRESETS = [
 ];
 
 const CLOUD_COUNTS = { clear: 0, partly: 22, cloudy: 48, overcast: 70 };
+const _fallbackDir = new THREE.Vector3(0.3, 1, 0.2).normalize();
+const _snap = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3(), _upL = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 
 export class SkySystem {
   constructor(scene, renderer, quality = {}) {
@@ -228,9 +230,27 @@ export class SkySystem {
 
   /** Coloca la luz del sol (y su cámara de sombras) alrededor del objetivo. */
   followTarget(target) {
-    this.sunTarget.position.copy(target);
-    const dir = this.night ? this.uniforms.uMoonDir.value : this.sunDir;
-    this.sun.position.copy(target).addScaledVector(dir.y > 0.05 ? dir : new THREE.Vector3(0.3, 1, 0.2).normalize(), 150);
+    let dir = this.night ? this.uniforms.uMoonDir.value : this.sunDir;
+    if (dir.y <= 0.05) dir = _fallbackDir;
+    // el centro del mapa de sombras se ajusta a la rejilla de texels en el espacio de la luz:
+    // si se desplazara de forma continua con el avión, todas las sombras del terreno
+    // «temblarían» y el mundo parecería ir a tirones al moverse
+    const sh = this.sun.shadow;
+    const texel = sh && sh.mapSize.x > 0 ? (sh.camera.right - sh.camera.left) / sh.mapSize.x : 0;
+    _snap.copy(target);
+    if (texel > 0) {
+      _fwd.copy(dir).negate();
+      _right.crossVectors(_up, _fwd);
+      if (_right.lengthSq() < 1e-6) _right.set(1, 0, 0);
+      _right.normalize();
+      _upL.crossVectors(_fwd, _right).normalize();
+      const u = Math.round(target.dot(_right) / texel) * texel;
+      const v = Math.round(target.dot(_upL) / texel) * texel;
+      const w = target.dot(_fwd);
+      _snap.copy(_right).multiplyScalar(u).addScaledVector(_upL, v).addScaledVector(_fwd, w);
+    }
+    this.sunTarget.position.copy(_snap);
+    this.sun.position.copy(_snap).addScaledVector(dir, 150);
   }
 
   update(dt, camera, windVec) {

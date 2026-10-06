@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { SHADOW_SIZES } from '../data/settings.js';
 import { setTextureQuality } from './TextureFactory.js';
 import { clamp } from '../utils/math3d.js';
+import { RealisticPost } from './RealisticPost.js';
 
 export class Renderer {
   constructor(container, gfx) {
@@ -31,7 +32,7 @@ export class Renderer {
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = 1.0;
-    r.shadowMap.enabled = SHADOW_SIZES[this.gfx.shadows] > 0;
+    r.shadowMap.enabled = SHADOW_SIZES[this.shadowLevel] > 0;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer = r;
     this.canvas = canvas;
@@ -49,14 +50,23 @@ export class Renderer {
     setTextureQuality(gfx.textureQuality ?? 1);
     if (needRecreate) {
       const old = this.renderer;
+      this.post?.dispose();
+      this.post = null;
       this.canvas.remove();
       old.dispose();
       this.create();
       return true;
     }
-    this.renderer.shadowMap.enabled = SHADOW_SIZES[gfx.shadows] > 0;
+    this.renderer.shadowMap.enabled = SHADOW_SIZES[this.shadowLevel] > 0;
+    if (!gfx.realistic && this.post) { this.post.dispose(); this.post = null; }
     this.resize();
     return false;
+  }
+
+  /** Render realista (mejora de pago, solo visual): sombras de alta resolución como mínimo. */
+  get shadowLevel() {
+    if (!this.gfx.realistic || this.gfx.shadows === 'off') return this.gfx.shadows;
+    return this.gfx.shadows === 'ultra' ? 'ultra' : 'high';
   }
 
   get pixelRatio() {
@@ -103,11 +113,12 @@ export class Renderer {
   }
 
   configureShadowLight(light) {
-    const size = SHADOW_SIZES[this.gfx.shadows] || 0;
+    const level = this.shadowLevel;
+    const size = SHADOW_SIZES[level] || 0;
     light.castShadow = size > 0;
     if (size > 0) {
       light.shadow.mapSize.set(size, size);
-      const ext = this.gfx.shadows === 'ultra' ? 45 : this.gfx.shadows === 'low' ? 25 : 35;
+      const ext = level === 'ultra' ? 45 : level === 'low' ? 25 : 35;
       const cam = light.shadow.camera;
       cam.left = -ext; cam.right = ext; cam.top = ext; cam.bottom = -ext;
       cam.near = 1; cam.far = 400;
@@ -120,6 +131,11 @@ export class Renderer {
 
   render(scene, camera) {
     if (this.contextLost) return;
+    if (this.gfx.realistic) {
+      this.post ??= new RealisticPost(this.renderer);
+      this.post.render(scene, camera, performance.now() / 1000);
+      return;
+    }
     this.renderer.render(scene, camera);
   }
 
@@ -129,6 +145,7 @@ export class Renderer {
   }
 
   dispose() {
+    this.post?.dispose();
     window.removeEventListener('resize', this.onResize);
     this.renderer.dispose();
     this.canvas.remove();

@@ -8,6 +8,7 @@ import { L, T } from '../core/i18n.js';
 import { GRAPHICS_PRESETS, ACTION_LABELS, defaultSettings, AXIS_FUNCTIONS } from '../data/settings.js';
 import { transmitterAxisMap, gamepadAxisMapForMode } from '../controls/RadioController.js';
 import { GamepadControls } from '../controls/GamepadControls.js';
+import { PREMIUM_PRICE_USD } from '../core/Premium.js';
 
 const pct = (v) => `${Math.round(v * 100)}%`;
 
@@ -59,6 +60,7 @@ export class SettingsScreen extends Screen {
     const set = (k, rebuild = false) => (v) => { g[k] = v; g.preset = 'custom'; this.save('graphics'); apply(rebuild); };
     const wrap = h('div', {});
     const draw = () => wrap.replaceChildren(
+      this.premiumCard(draw),
       h('div', { class: 'section-title' }, L('Perfil gráfico', 'Graphics profile')),
       field(L('Calidad', 'Quality'), segmented([...Object.entries(GRAPHICS_PRESETS).map(([k, v]) => ({ value: k, label: T(v.label) })), ...(g.preset === 'custom' ? [{ value: 'custom', label: L('Personal', 'Custom') }] : [])], g.preset, (v) => {
         if (v === 'custom') return;
@@ -84,6 +86,74 @@ export class SettingsScreen extends Screen {
       field(L('Mostrar FPS y rendimiento', 'Show FPS and performance'), toggle(g.showFps, (v) => { g.showFps = v; this.save('graphics'); })));
     draw();
     return wrap;
+  }
+
+  /** Tarjeta de la mejora de pago «Render realista» (compra, canje de código y activación). */
+  premiumCard(redraw) {
+    const a = this.app, g = a.settings.graphics, pm = a.premium;
+    const card = h('div', { class: 'premium-card' });
+    const fill = () => {
+      const notice = h('p', { class: 'premium-note' },
+        L('Mejora SOLO visual: iluminación HDR, bloom, curva fílmica, gradación de color, sombras de alta resolución y pintura con barniz. No cambia la física, el manejo ni la sensación de vuelo. Pide más a la GPU.',
+          'VISUAL-ONLY upgrade: HDR lighting, bloom, filmic curve, colour grading, high-resolution shadows and clear-coated paint. It does not change physics, handling or how the aircraft feels to fly. More demanding on the GPU.'));
+      const head = h('div', { class: 'premium-head' },
+        h('div', { class: 'premium-title' }, L('Render realista', 'Realistic render'), h('span', { class: 'premium-badge' }, pm.unlocked ? L('Desbloqueado', 'Unlocked') : `Premium · ${PREMIUM_PRICE_USD} USD`)));
+      if (pm.unlocked) {
+        card.replaceChildren(head, notice, field(L('Activar render realista', 'Enable realistic render'), toggle(g.realistic, (v) => { g.realistic = v; this.save('graphics'); a.applyGraphics(false); })));
+        return;
+      }
+      const msg = h('div', { class: 'premium-msg', role: 'status', 'aria-live': 'polite' });
+      const say = (text, kind = '') => { msg.textContent = text; msg.className = `premium-msg ${kind}`; };
+      const input = h('input', { type: 'text', class: 'premium-code', placeholder: L('Código de descuento', 'Discount code'), autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', maxlength: '64' });
+      const redeemBtn = h('button', { class: 'btn small', type: 'button' }, L('Canjear', 'Redeem'));
+      const redeem = async () => {
+        redeemBtn.disabled = true;
+        say(L('Comprobando…', 'Checking…'));
+        const r = await pm.redeem(input.value);
+        redeemBtn.disabled = false;
+        if (r.ok) {
+          g.realistic = true;
+          this.save('graphics');
+          a.applyGraphics(false);
+          a.ui.toast(L('Código aplicado (100 % de descuento): render realista desbloqueado.', 'Code applied (100% off): realistic render unlocked.'), 'ok', 5000);
+          fill();
+          redraw?.();
+          return;
+        }
+        const errs = {
+          empty: L('Escribe un código.', 'Enter a code.'),
+          invalid: L('Código no válido.', 'Invalid code.'),
+          used: L('Este código ya se usó (es de un solo uso).', 'This code has already been used (single use).'),
+          too_many_attempts: L('Demasiados intentos. Espera unos minutos.', 'Too many attempts. Wait a few minutes.'),
+          network: L('Sin conexión con el servidor de licencias.', 'Cannot reach the licence server.'),
+          insecure: L('El canje necesita una conexión segura (https).', 'Redeeming requires a secure (https) connection.'),
+        };
+        say(errs[r.error] || L('No se pudo canjear el código.', 'Could not redeem the code.'), 'bad');
+      };
+      redeemBtn.addEventListener('click', redeem);
+      input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') redeem(); });
+      const buyRow = h('div', { class: 'premium-row' });
+      card.replaceChildren(head, notice, buyRow, h('div', { class: 'premium-row' }, input, redeemBtn), msg);
+      // el botón de compra solo aparece si hay pasarela de pago configurada en el servidor
+      pm.probe().then((srv) => {
+        if (srv?.payments) {
+          const buy = h('button', { class: 'btn primary small', type: 'button' }, L(`Comprar por ${srv.priceUsd} USD`, `Buy for ${srv.priceUsd} USD`));
+          buy.addEventListener('click', async () => {
+            buy.disabled = true;
+            say(L('Abriendo el pago seguro…', 'Opening secure checkout…'));
+            const r = await pm.buy();
+            if (!r.ok) { buy.disabled = false; say(L('No se pudo iniciar el pago.', 'Could not start the payment.'), 'bad'); }
+          });
+          buyRow.replaceChildren(buy);
+        } else {
+          buyRow.replaceChildren(h('span', { class: 'premium-hint' }, srv
+            ? L('El pago con tarjeta aún no está configurado en este servidor. Puedes canjear un código.', 'Card payment is not configured on this server yet. You can redeem a code.')
+            : L('Esta versión web no tiene pasarela de pago. Puedes canjear un código (queda marcado como usado en este dispositivo).', 'This web version has no payment gateway. You can redeem a code (it is marked as used on this device).')));
+        }
+      });
+    };
+    fill();
+    return card;
   }
 
   /* ─────────── controles ─────────── */

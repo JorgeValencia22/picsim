@@ -3,7 +3,7 @@
  * Estrategia: precarga del núcleo + "stale-while-revalidate" para el resto de recursos propios.
  * Cambiar VERSION al publicar fuerza la renovación de la caché.
  */
-const VERSION = 'rcfs-v4';
+const VERSION = 'rcfs-v5';
 const CORE = ['./', './index.html', './manifest.webmanifest', './styles/main.css', './styles/menus.css', './styles/hud.css', './styles/controls.css',
   './vendor/three/three.module.js', './vendor/three/three.core.js', './src/main.js', './icons/icon-192.png', './icons/icon-512.png'];
 

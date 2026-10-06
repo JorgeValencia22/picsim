@@ -202,3 +202,15 @@
   .preview-wrap { max-height: none; min-height: 120px; }
   .quick-specs { display: none; }
 }
+
+/* ── Mejora de pago «Render realista» ── */
+.premium-card { margin: 4px 0 14px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(255, 138, 31, 0.4); background: linear-gradient(135deg, rgba(255, 138, 31, 0.12), rgba(62, 198, 255, 0.06)); }
+.premium-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.premium-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05em; }
+.premium-badge { font-size: 0.75em; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--accent); color: #1a0d00; letter-spacing: 0.02em; }
+.premium-note { margin: 8px 0 10px; font-size: 0.86em; line-height: 1.45; opacity: 0.88; }
+.premium-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.premium-code { flex: 1 1 160px; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, 0.3); color: inherit; font: inherit; }
+.premium-hint { font-size: 0.82em; opacity: 0.75; }
+.premium-msg { min-height: 1.2em; margin-top: 6px; font-size: 0.85em; }
+.premium-msg.bad { color: #ffb3b5; }

@@ -8,6 +8,7 @@ import { AudioEngine } from './core/AudioEngine.js';
 import { Simulation } from './core/Simulation.js';
 import { setLanguage, setUnits, L, T } from './core/i18n.js';
 import { defaultSettings, deepMerge, migrateSettings } from './data/settings.js';
+import { Premium } from './core/Premium.js';
 import { AircraftRegistry } from './aircraft/AircraftRegistry.js';
 import { Renderer } from './render/Renderer.js';
 import { CameraManager } from './camera/CameraManager.js';
@@ -49,6 +50,9 @@ class App {
       delete this.settings.graphics.label;
       if (isMobile()) { this.settings.graphics.dynamicResolution = true; this.settings.graphics.targetFps = 60; }
     }
+    // mejora de pago «Render realista»: sin licencia nunca se activa
+    this.premium = new Premium(this.storage);
+    if (!this.premium.unlocked) this.settings.graphics.realistic = false;
     this.wakeLock = new WakeLock();
     this.bus = new EventBus();
     this.net = new OfflineAdapter();
@@ -96,6 +100,7 @@ class App {
     const unlock = () => { this.audio.init(); this.audio.applyVolumes(); if (this.sim.aircraft) this.audio.setAircraft(this.sim.aircraft.spec); if (this.sim.env) this.audio.setAmbience(this.sim.env.ambience, this.sim.weather); };
     for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) window.addEventListener(ev, unlock, { once: true });
     this.last = performance.now();
+    this.refreshMs = 1000 / 60;
     requestAnimationFrame((t) => this.loop(t));
     try {
       await this.sim.startMenuDemo();
@@ -107,7 +112,24 @@ class App {
     this.state = 'menu';
     this.ui.replace(new MainMenu(this));
     this.ui.loading(false);
+    this.checkPremiumReturn();
     document.getElementById('rotate-dismiss')?.addEventListener('click', () => document.getElementById('rotate-hint').classList.remove('enabled'));
+  }
+
+  /** Vuelta desde la pasarela de pago: confirma la compra y activa el render realista. */
+  async checkPremiumReturn() {
+    const r = await this.premium.handleReturn();
+    if (!r) return;
+    if (r.ok) {
+      this.settings.graphics.realistic = true;
+      this.saveSettings();
+      this.applyGraphics(false);
+      this.ui.toast(L('¡Compra completada! Render realista activado.', 'Purchase complete! Realistic render enabled.'), 'ok', 6000);
+    } else if (r.error === 'cancelled') {
+      this.ui.toast(L('Compra cancelada: no se ha realizado ningún cargo.', 'Purchase cancelled: you have not been charged.'), 'info', 5000);
+    } else {
+      this.ui.toast(L('No se pudo confirmar el pago. Si se cobró, contacta con soporte.', 'Could not confirm the payment. If you were charged, contact support.'), 'danger', 8000);
+    }
   }
 
   fatal(msg) {
@@ -463,10 +485,19 @@ class App {
 
   loop(now) {
     requestAnimationFrame((t) => this.loop(t));
+    // ritmo de fotogramas: se mide el intervalo real de la pantalla y, si hay límite de FPS, se
+    // dibuja cada N refrescos (cadencia constante). Antes se descartaba un fotograma cada vez que
+    // el navegador llegaba unos microsegundos antes de tiempo, lo que producía tirones visibles.
+    const raw = now - (this.lastTick ?? now);
+    this.lastTick = now;
+    if (raw > 2 && raw < 100) this.refreshMs += (raw - this.refreshMs) * 0.05;
     const target = this.settings.graphics.targetFps;
-    const minDt = target ? 1 / (target + 2) : 0;
+    if (target) {
+      const every = Math.max(1, Math.round(1000 / target / this.refreshMs));
+      this.tick = ((this.tick || 0) + 1) % every;
+      if (this.tick !== 0) return;
+    }
     let dt = (now - this.last) / 1000;
-    if (dt < minDt) return;
     this.last = now;
     if (dt > 0.5) dt = 0.5;
     this.fps += ((1 / Math.max(dt, 1e-3)) - this.fps) * 0.05;
