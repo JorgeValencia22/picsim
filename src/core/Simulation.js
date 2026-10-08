@@ -77,7 +77,7 @@ export class Simulation {
     onProgress?.(0.45, L('Construyendo escenario…', 'Building scenery…'));
     await nextFrame();
     const g = this.settings.graphics;
-    this.envRenderer = new EnvironmentRenderer(this.env, { terrainDetail: g.terrainDetail ?? 1, vegetation: g.vegetation ?? 0.7, shadows: g.shadows !== 'off' });
+    this.envRenderer = new EnvironmentRenderer(this.env, { terrainDetail: g.terrainDetail ?? 1, vegetation: g.vegetation ?? 0.7, shadows: g.shadows !== 'off', textureQuality: g.textureQuality ?? 1, antialias: !!g.antialias });
     this.scene.add(this.envRenderer.group);
     this.buildLife();
     onProgress?.(0.75, L('Preparando cámaras…', 'Preparing cameras…'));
@@ -130,6 +130,9 @@ export class Simulation {
     this.mode = cfg.mode || 'flight';
     this.spawn(cfg.launch || 'runway');
     this.setupTraffic();
+    // compila de antemano todos los sombreadores de la escena: sin tirones la primera vez que
+    // aparecen el humo, el tráfico o los escombros
+    try { await this.renderer.renderer.compileAsync?.(this.scene, this.cameras.camera); } catch { /* opcional */ }
     onProgress?.(1, '');
     return envChanged;
   }
@@ -844,7 +847,7 @@ export class Simulation {
     if (!this.env) return;
     this.envRenderer?.dispose();
     const g = this.settings.graphics;
-    this.envRenderer = new EnvironmentRenderer(this.env, { terrainDetail: g.terrainDetail ?? 1, vegetation: g.vegetation ?? 0.7, shadows: g.shadows !== 'off' });
+    this.envRenderer = new EnvironmentRenderer(this.env, { terrainDetail: g.terrainDetail ?? 1, vegetation: g.vegetation ?? 0.7, shadows: g.shadows !== 'off', textureQuality: g.textureQuality ?? 1, antialias: !!g.antialias });
     this.scene.add(this.envRenderer.group);
     this.buildLife();
   }

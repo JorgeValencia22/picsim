@@ -75,8 +75,6 @@ export class Mountains extends EnvironmentBase {
     this.addProp({ type: 'windsock', x: xc + 18, z: 12, h: 5 });
     this.addProp({ type: 'car', x: xc + 140, z: -40, rot: 0, color: '#7f8c8d' });
     this.addProp({ type: 'car', x: xc + 143, z: -30, rot: 0.1, color: '#c0392b' });
-    this.addProp({ type: 'person', x: xc + 12, z: 6, rot: -Math.PI / 2, shirt: '#e67e22', pants: '#2c3e50', height: 1.75 });
-    this.addProp({ type: 'person', x: xc + 13, z: -7, rot: -Math.PI / 2, shirt: '#2980b9', pants: '#1b2631', height: 1.7 });
     this.addProp({ type: 'shed', x: -680, z: 190, rot: 0, w: 8, d: 6, h: 3, roofH: 1.5, color: '#8d6e63', roofColor: '#4e342e' });
     // bosques: densos en el valle y la parte baja de la ladera, dispersos en la cima
     const dens = (x, z) => {

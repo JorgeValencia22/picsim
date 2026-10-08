@@ -4,7 +4,7 @@
  * eléctrica como referencia visual y una zona de vuelo segura al oeste del pueblo.
  */
 import { EnvironmentBase } from './EnvironmentBase.js';
-import { addHouse, addFarm, addPeople } from './scenarioHelpers.js';
+import { addHouse, addFarm } from './scenarioHelpers.js';
 import { smoothstep } from '../utils/math3d.js';
 
 export class RuralTown extends EnvironmentBase {
@@ -76,7 +76,6 @@ export class RuralTown extends EnvironmentBase {
     }
     this.addProp({ type: 'church', x: t.x + 20, z: t.z - 50, rot: 0, w: 12, d: 26, h: 9, roofH: 5, towerH: 26, color: '#efe6d5', roofColor: '#7b3f2a' });
     this.addProp({ type: 'tower', x: t.x - 120, z: t.z + 120, h: 22, color: '#90a4ae', waterTower: true });
-    addPeople(this, t.x, t.z, 12, 40, 0);
     // galpones y silos en las afueras
     this.addProp({ type: 'barn', x: 140, z: -140, rot: 0.2, w: 22, d: 40, h: 7, roofH: 4, color: '#9e9e9e', roofColor: '#757575' });
     this.addProp({ type: 'barn', x: 175, z: -90, rot: 0.2, w: 18, d: 30, h: 6, roofH: 3.5, color: '#b0bec5', roofColor: '#607d8b' });
@@ -92,7 +91,6 @@ export class RuralTown extends EnvironmentBase {
     this.addProp({ type: 'windsock', x: -20, z: -30, h: 5 });
     this.addProp({ type: 'car', x: -14, z: 12, rot: 0, color: '#1e8449' });
     this.addProp({ type: 'table', x: -24, z: 6, rot: Math.PI / 2 });
-    addPeople(this, -28, 4, 3, 6, -Math.PI / 2);
     this.treeLine(-200, -500, -200, 200, 10, 'poplar');
     this.scatterTrees({ count: 1100, area: { shape: 'ring', x: 0, z: 0, r0: 250, r1: 1500 }, variants: ['broadleaf', 'broadleaf', 'pine', 'bush'], cluster: 0.1 });
   }

@@ -4,7 +4,7 @@
  * marina), vegetación costera, caminos y un pequeño caserío. Pista de hierba en la meseta.
  */
 import { EnvironmentBase } from './EnvironmentBase.js';
-import { addHouse, addPeople } from './scenarioHelpers.js';
+import { addHouse } from './scenarioHelpers.js';
 import { smoothstep, lerp } from '../utils/math3d.js';
 
 export class Coast extends EnvironmentBase {
@@ -90,9 +90,6 @@ export class Coast extends EnvironmentBase {
     this.addProp({ type: 'car', x: 160, z: 70, rot: 0.2, color: '#f39c12' });
     this.addProp({ type: 'car', x: 166, z: 72, rot: 0.1, color: '#ecf0f1' });
     this.addProp({ type: 'table', x: 130, z: 60, rot: 0 });
-    addPeople(this, 125, 58, 4, 8, Math.PI);
-    addPeople(this, this.coastX(150) + 25, 150, 8, 60, -Math.PI / 2);
-    this.addProp({ type: 'person', x: this.slopeSite.x + 6, z: this.slopeSite.z + 3, rot: -Math.PI / 2, shirt: '#16a085', pants: '#2c3e50', height: 1.72 });
     // vegetación costera
     const coastal = (x, z) => {
       const u = x - this.coastX(z);

@@ -4,7 +4,7 @@
  * Pista improvisada de hierba sobre una loma suave. Ideal para vuelo recreativo y planeadores.
  */
 import { EnvironmentBase } from './EnvironmentBase.js';
-import { addFarm, addPeople } from './scenarioHelpers.js';
+import { addFarm } from './scenarioHelpers.js';
 import { smoothstep } from '../utils/math3d.js';
 
 export class Countryside extends EnvironmentBase {
@@ -62,7 +62,6 @@ export class Countryside extends EnvironmentBase {
     this.addProp({ type: 'car', x: 14, z: 18, rot: 0.6, color: '#2c3e50' });
     this.addProp({ type: 'car', x: 20, z: 22, rot: 0.8, color: '#bdc3c7' });
     this.addProp({ type: 'table', x: 8, z: 12, rot: 0.6 });
-    addPeople(this, 6, 10, 3, 6, Math.PI);
     // cercos a lo largo del camino principal
     this.fence(-300, 50, 0, 40, 'wire', 1.1);
     this.fence(400, 8, 900, 78, 'wire', 1.1);

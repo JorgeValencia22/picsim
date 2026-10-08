@@ -1,12 +1,11 @@
 /**
- * Utilidades de composición de escenarios (granjas, casas, personas, zonas de boxes).
+ * Utilidades de composición de escenarios (granjas, casas, zonas de boxes).
  * Sólo generan descriptores; el renderizado y las colisiones se derivan de ellos.
  */
 import { DEG } from '../utils/math3d.js';
 
 const HOUSE_COLORS = ['#e8dcc8', '#f1e3c6', '#d9c7a7', '#ece6da', '#c9b79c', '#e6d2b5', '#f4efe6', '#d4b896'];
 const ROOF_COLORS = ['#8b3a2b', '#9c4a30', '#6e3b2a', '#5a5f66', '#7b2f22', '#a0522d'];
-const SHIRT_COLORS = ['#c0392b', '#2471a3', '#f1c40f', '#27ae60', '#ecf0f1', '#8e44ad', '#e67e22', '#34495e', '#16a085', '#d35400'];
 
 export function pick(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
 
@@ -44,18 +43,6 @@ export function addFarm(env, x, z, rot = 0) {
   env.thermalSources.push({ x, z });
 }
 
-/** Grupo de personas (espectadores o pilotos). */
-export function addPeople(env, x, z, count, spread = 6, facing = 0) {
-  const r = env.rng;
-  for (let i = 0; i < count; i++) {
-    env.addProp({
-      type: 'person', x: x + (r() - 0.5) * spread, z: z + (r() - 0.5) * spread,
-      rot: facing + (r() - 0.5) * 0.8, shirt: pick(r, SHIRT_COLORS), pants: pick(r, ['#2c3e50', '#34495e', '#5d4037', '#1b2631', '#7f8c8d']),
-      height: 1.6 + r() * 0.25, sitting: r() < 0.2,
-    });
-  }
-}
-
 /** Zona de boxes de un club: caseta, mesas, bancos, banderas y vehículos. */
 export function addPitArea(env, x, z, heading = 0) {
   const rot = -heading * DEG;
@@ -77,7 +64,6 @@ export function addPitArea(env, x, z, heading = 0) {
   [px, pz] = at(12, -4);
   env.addProp({ type: 'flag', x: px, z: pz, h: 7, color: '#1e88e5' });
   [px, pz] = at(0, -7);
-  addPeople(env, px, pz, 7, 22, rot + Math.PI);
   return r;
 }
 

@@ -100,16 +100,20 @@ export class Renderer {
       if (this.dynScale !== 1) { this.dynScale = 1; this.resize(); }
       return;
     }
+    // cada cambio de resolución reasigna los búferes y provoca un tirón: se decide con ventanas de
+    // ~1,5 s, se baja enseguida si hace falta pero se sube solo tras varias ventanas holgadas
     this.frameTimes.push(frameDt);
-    if (this.frameTimes.length < 45) return;
-    const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
+    if (this.frameTimes.length < 90) return;
+    const sorted = this.frameTimes.slice().sort((a, b) => a - b);
     this.frameTimes.length = 0;
+    const p75 = sorted[Math.floor(sorted.length * 0.75)];
     const target = 1 / (this.gfx.targetFps || 60);
     let s = this.dynScale;
-    if (avg > target * 1.15) s *= 0.88;
-    else if (avg < target * 0.8) s *= 1.06;
+    if (p75 > target * 1.2) { s *= 0.85; this.goodWindows = 0; }
+    else if (p75 < target * 1.05) { this.goodWindows = (this.goodWindows || 0) + 1; if (this.goodWindows >= 6) { s *= 1.08; this.goodWindows = 0; } }
+    else this.goodWindows = 0;
     s = clamp(s, 0.5, 1);
-    if (Math.abs(s - this.dynScale) > 0.01) { this.dynScale = s; this.resize(); }
+    if (Math.abs(s - this.dynScale) > 0.02) { this.dynScale = s; this.resize(); }
   }
 
   configureShadowLight(light) {

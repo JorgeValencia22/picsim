@@ -4,7 +4,7 @@
  * gradas de espectadores, hangar y espacio aéreo despejado.
  */
 import { EnvironmentBase } from './EnvironmentBase.js';
-import { addPeople, addParking } from './scenarioHelpers.js';
+import { addParking } from './scenarioHelpers.js';
 import { smoothstep } from '../utils/math3d.js';
 
 export class CompetitionField extends EnvironmentBase {
@@ -55,11 +55,8 @@ export class CompetitionField extends EnvironmentBase {
     }
     for (const x of [-120, 120]) this.addProp({ type: 'groundMarker', x, z: -75, rot: 0, color: '#ffffff' });
     this.addProp({ type: 'booth', x: 0, z: 14, rot: 0, w: 8, d: 4, h: 2.6, roofH: 0.4, color: '#eceff1', roofColor: '#263238' });
-    addPeople(this, 0, 12, 4, 6, Math.PI);
     this.addProp({ type: 'stand', x: -50, z: 48, rot: 0, w: 40, d: 9, h: 4, color: '#90a4ae' });
     this.addProp({ type: 'stand', x: 50, z: 48, rot: 0, w: 40, d: 9, h: 4, color: '#90a4ae' });
-    addPeople(this, -50, 48, 30, 36, Math.PI);
-    addPeople(this, 50, 48, 30, 36, Math.PI);
     this.addProp({ type: 'hangar', x: -150, z: 75, rot: 0, w: 40, d: 26, h: 9, roofH: 4, color: '#b0bec5', roofColor: '#78909c' });
     this.addProp({ type: 'windsock', x: 120, z: -5, h: 7 });
     this.addProp({ type: 'windsock', x: -120, z: -5, h: 7 });

@@ -3,7 +3,6 @@
  * fusión (merge) de geometrías para reducir llamadas de dibujo.
  */
 import * as THREE from 'three';
-import { TREE_DIMS } from '../environments/EnvironmentBase.js';
 
 const _c = new THREE.Color();
 
@@ -221,74 +220,6 @@ export function propParts(p) {
       break;
   }
   return parts.filter(Boolean);
-}
-
-/** Geometría de árbol con color de vértice. detail: 1 (alto) o 0 (bajo). */
-export function treeGeometry(variant, detail = 1) {
-  const d = TREE_DIMS[variant] || TREE_DIMS.broadleaf;
-  const parts = [];
-  const seg = detail ? 7 : 4;
-  const trunkCol = '#5b4636';
-  switch (variant) {
-    case 'pine':
-      parts.push(cyl(d.trunkR * 0.7, d.trunkR, d.trunkH + 1, trunkCol, 0, (d.trunkH + 1) / 2, 0, 5));
-      for (let i = 0; i < (detail ? 3 : 1); i++) {
-        const h = (d.height - d.crownY0) / (detail ? 2.2 : 1);
-        const r = d.crownR * (1 - i * 0.25);
-        parts.push({ geo: colored(new THREE.ConeGeometry(r, h, seg), i % 2 ? '#2f5a2e' : '#284f2a'), matrix: M(0, d.crownY0 + h / 2 + i * h * 0.55, 0) });
-      }
-      break;
-    case 'cypress':
-      parts.push(cyl(d.trunkR * 0.7, d.trunkR, d.trunkH + 0.5, trunkCol, 0, (d.trunkH + 0.5) / 2, 0, 5));
-      parts.push({ geo: colored(new THREE.SphereGeometry(1, seg, detail ? 6 : 4), '#2d4a2b'), matrix: M(0, (d.height + d.crownY0) / 2, 0, 0, d.crownR, (d.height - d.crownY0) / 2, d.crownR) });
-      break;
-    case 'poplar':
-      parts.push(cyl(d.trunkR * 0.6, d.trunkR, d.trunkH + 2, trunkCol, 0, (d.trunkH + 2) / 2, 0, 5));
-      parts.push({ geo: colored(new THREE.SphereGeometry(1, seg, detail ? 7 : 4), '#4d7a35'), matrix: M(0, (d.height + d.crownY0) / 2, 0, 0, d.crownR, (d.height - d.crownY0) / 2, d.crownR) });
-      break;
-    case 'palm': {
-      parts.push(cyl(d.trunkR * 0.8, d.trunkR * 1.2, d.trunkH, '#8d7a5b', 0, d.trunkH / 2, 0, 6));
-      const leaves = detail ? 7 : 4;
-      for (let i = 0; i < leaves; i++) {
-        const a = (i / leaves) * Math.PI * 2;
-        parts.push({ geo: colored(new THREE.BoxGeometry(3.2, 0.08, 0.7), '#4f7d2f'), matrix: M(Math.cos(a) * 1.4, d.trunkH + 0.2, Math.sin(a) * 1.4, -a, 1, 1, 1, 0, -0.35) });
-      }
-      break;
-    }
-    case 'bush':
-      parts.push({ geo: colored(new THREE.IcosahedronGeometry(d.crownR, detail ? 1 : 0), '#4a6d2c'), matrix: M(0, d.crownR * 0.7, 0, 0, 1, 0.75, 1) });
-      break;
-    case 'broadleaf':
-    default:
-      parts.push(cyl(d.trunkR * 0.7, d.trunkR, d.trunkH + 1, trunkCol, 0, (d.trunkH + 1) / 2, 0, 5));
-      if (detail) {
-        parts.push({ geo: colored(new THREE.IcosahedronGeometry(d.crownR, 1), '#456f2b'), matrix: M(0, d.crownY0 + d.crownR * 0.9, 0) });
-        parts.push({ geo: colored(new THREE.IcosahedronGeometry(d.crownR * 0.7, 1), '#3e6627'), matrix: M(d.crownR * 0.5, d.crownY0 + d.crownR * 1.4, 0.4) });
-        parts.push({ geo: colored(new THREE.IcosahedronGeometry(d.crownR * 0.65, 0), '#4b7a30'), matrix: M(-d.crownR * 0.45, d.crownY0 + d.crownR * 1.3, -0.5) });
-      } else parts.push({ geo: colored(new THREE.IcosahedronGeometry(d.crownR * 1.1, 0), '#456f2b'), matrix: M(0, d.crownY0 + d.crownR, 0) });
-      break;
-  }
-  const g = mergeColored(parts);
-  for (const p of parts) p.geo.dispose();
-  return g;
-}
-
-/** Figura humana sencilla (dos partes de color: ropa superior y pantalón; cabeza aparte). */
-export function personGeometry() {
-  const upper = mergeColored([
-    box(0.42, 0.6, 0.24, '#ffffff', 0, 1.2, 0),
-    box(0.11, 0.55, 0.11, '#ffffff', -0.27, 1.2, 0),
-    box(0.11, 0.55, 0.11, '#ffffff', 0.27, 1.2, 0),
-  ]);
-  const lower = mergeColored([
-    box(0.16, 0.85, 0.16, '#ffffff', -0.1, 0.45, 0),
-    box(0.16, 0.85, 0.16, '#ffffff', 0.1, 0.45, 0),
-  ]);
-  const head = mergeColored([
-    { geo: colored(new THREE.SphereGeometry(0.12, 8, 6), '#e0b48c'), matrix: M(0, 1.64, 0) },
-    box(0.05, 0.08, 0.05, '#e0b48c', 0, 1.52, 0),
-  ]);
-  return { upper, lower, head };
 }
 
 /** Vaca u oveja (eje largo en +X, patas apoyadas en y = 0), con cuerpos redondeados. */

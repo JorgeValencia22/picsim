@@ -4,7 +4,7 @@
  * trabajo, zona de espectadores, aparcamiento, vallas, banderas y manga de viento.
  */
 import { EnvironmentBase } from './EnvironmentBase.js';
-import { addPitArea, addParking, addPeople } from './scenarioHelpers.js';
+import { addPitArea, addParking } from './scenarioHelpers.js';
 import { smoothstep } from '../utils/math3d.js';
 
 export class Airfield extends EnvironmentBase {
@@ -62,8 +62,6 @@ export class Airfield extends EnvironmentBase {
     this.addProp({ type: 'flag', x: 42, z: 1, h: 8, color: '#f9a825' });
     // espectadores
     for (let i = -3; i <= 3; i++) this.addProp({ type: 'bench', x: i * 8, z: 34, rot: 0 });
-    addPeople(this, 0, 36, 16, 50, Math.PI);
-    addPeople(this, 2, 2, 4, 30, Math.PI);
     // aparcamiento
     addParking(this, 48, 38, 3, 14, Math.PI / 2);
     this.addProp({ type: 'container', x: -45, z: 20, rot: 0, w: 6, d: 2.5, h: 2.6, color: '#3c6e71' });

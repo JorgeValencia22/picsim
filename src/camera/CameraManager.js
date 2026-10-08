@@ -12,6 +12,34 @@ const CINE_SHOTS = ['side', 'flyby', 'rear', 'orbit', 'front', 'lowpass', 'appro
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
 const UP = new THREE.Vector3(0, 1, 0);
 
+/**
+ * Resorte críticamente amortiguado (SmoothDamp): sigue al objetivo sin rebotes ni saltos aunque el
+ * intervalo entre fotogramas varíe. vel guarda la velocidad interna del resorte.
+ */
+function smoothDampVec(cur, target, vel, smoothTime, dt) {
+  const st = Math.max(1e-4, smoothTime);
+  const omega = 2 / st;
+  const x = omega * dt;
+  const k = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  for (const c of ['x', 'y', 'z']) {
+    const change = cur[c] - target[c];
+    const temp = (vel[c] + omega * change) * dt;
+    vel[c] = (vel[c] - omega * temp) * k;
+    cur[c] = target[c] + (change + temp) * k;
+  }
+  return cur;
+}
+function smoothDamp(cur, target, state, smoothTime, dt) {
+  const st = Math.max(1e-4, smoothTime);
+  const omega = 2 / st, x = omega * dt;
+  const k = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const change = cur - target;
+  const temp = (state.v + omega * change) * dt;
+  state.v = (state.v - omega * temp) * k;
+  return target + (change + temp) * k;
+}
+const _lead = new THREE.Vector3(), _fwd = new THREE.Vector3();
+
 export class CameraManager {
   constructor(settings) {
     this.s = settings; // settings.camera (referencia viva)
@@ -29,6 +57,13 @@ export class CameraManager {
     this.shake = 0;
     this.initialized = false;
     this.fovCurrent = settings.fov;
+    // estado de los resortes de la cámara (seguimiento tipo película)
+    this.lookVel = new THREE.Vector3();
+    this.velSmooth = new THREE.Vector3();
+    this.velSmoothVel = new THREE.Vector3();
+    this.chaseVel = new THREE.Vector3();
+    this.chaseFwd = new THREE.Vector3(1, 0, 0);
+    this.fovState = { v: 0 };
   }
 
   setEnvironment(env, pilot) {
@@ -117,8 +152,12 @@ export class CameraManager {
           this.lookPitch *= 1 - damp(3, dt);
         }
         if (this.tracking) {
-          if (!this.initialized) this.lookTarget.copy(t.pos);
-          this.lookTarget.lerp(t.pos, damp(lerp(80, 15, sm), dt));
+          if (!this.initialized) { this.lookTarget.copy(t.pos); this.lookVel.set(0, 0, 0); this.velSmooth.copy(t.vel); }
+          // el objetivo se adelanta lo que el resorte retrasa: el avión queda centrado sin temblores
+          const st = lerp(0.03, 0.22, sm);
+          smoothDampVec(this.velSmooth, t.vel, this.velSmoothVel, st * 1.5 + 0.05, dt);
+          _lead.copy(t.pos).addScaledVector(this.velSmooth, st);
+          smoothDampVec(this.lookTarget, _lead, this.lookVel, st, dt);
         } else if (!this.initialized) this.lookTarget.copy(t.pos);
         const dir = _v.copy(this.lookTarget).sub(cam.position);
         const dist = dir.length();
@@ -139,9 +178,13 @@ export class CameraManager {
         const span = Math.max(1.2, t.span);
         const D = (span * 2.6 + 2) * (this.s.chaseDistance || 1) / Math.max(0.5, this.zoom);
         const H = D * (this.s.chaseHeight ?? 0.3);
-        // detrás según la velocidad (o el morro si va despacio)
-        const fwd = _v.set(1, 0, 0).applyQuaternion(t.quat);
-        if (t.vel.length() > 3) fwd.lerp(_v2.copy(t.vel).normalize(), 0.6).normalize();
+        // detrás según la trayectoria suavizada (o el morro si va despacio): los giros bruscos y la
+        // turbulencia no sacuden la cámara, que describe curvas amplias como una toma de película
+        const fwdT = _fwd.set(1, 0, 0).applyQuaternion(t.quat);
+        if (t.vel.length() > 3) fwdT.lerp(_v2.copy(t.vel).normalize(), 0.7).normalize();
+        if (!this.initialized) this.chaseFwd.copy(fwdT);
+        this.chaseFwd.lerp(fwdT, 1 - Math.exp(-dt / lerp(0.12, 0.7, sm))).normalize();
+        const fwd = _v.copy(this.chaseFwd);
         const desired = _v2.copy(t.pos).addScaledVector(fwd, -D);
         desired.y += H;
         // órbita manual alrededor del avión
@@ -153,12 +196,16 @@ export class CameraManager {
           const since = (performance.now() - (this.lastManual || 0)) / 1000;
           if (since > 2.5) { this.lookYaw *= 1 - damp(1.5, dt); this.lookPitch *= 1 - damp(1.5, dt); }
         }
-        if (!this.initialized) this.chasePos.copy(desired);
-        this.chasePos.lerp(desired, damp(lerp(12, 2.2, sm), dt));
+        if (!this.initialized) { this.chasePos.copy(desired); this.chaseVel.set(0, 0, 0); this.lookTarget.copy(t.pos); this.lookVel.set(0, 0, 0); this.velSmooth.copy(t.vel); }
+        smoothDampVec(this.chasePos, desired, this.chaseVel, lerp(0.05, 0.4, sm), dt);
         const g = this.groundAt(this.chasePos.x, this.chasePos.z) + 0.8;
-        if (this.chasePos.y < g) this.chasePos.y = g;
+        if (this.chasePos.y < g) { this.chasePos.y = g; this.chaseVel.y = Math.max(0, this.chaseVel.y); }
         cam.position.copy(this.chasePos);
-        cam.lookAt(t.pos);
+        const stL = lerp(0.04, 0.17, sm);
+        smoothDampVec(this.velSmooth, t.vel, this.velSmoothVel, stL * 1.5 + 0.05, dt);
+        _lead.copy(t.pos).addScaledVector(this.velSmooth, stL);
+        smoothDampVec(this.lookTarget, _lead, this.lookVel, stL, dt);
+        cam.lookAt(this.lookTarget);
         fov = baseFov;
         break;
       }
@@ -198,7 +245,7 @@ export class CameraManager {
       default: break;
     }
     this.initialized = true;
-    this.fovCurrent += (fov - this.fovCurrent) * damp(reduce ? 3 : 6, dt);
+    this.fovCurrent = smoothDamp(this.fovCurrent, fov, this.fovState, reduce ? 0.6 : 0.35, dt);
     if (Math.abs(cam.fov - this.fovCurrent) > 0.01) {
       cam.fov = this.fovCurrent;
       cam.updateProjectionMatrix();
@@ -254,7 +301,9 @@ export class CameraManager {
     }
     const g = this.groundAt(cam.position.x, cam.position.z) + 0.4;
     if (cam.position.y < g) cam.position.y = g;
-    cam.lookAt(t.pos);
+    if (!this.initialized || c.t === 0) { this.lookTarget.copy(t.pos); this.lookVel.set(0, 0, 0); }
+    smoothDampVec(this.lookTarget, t.pos, this.lookVel, 0.08, dt);
+    cam.lookAt(this.lookTarget);
     return fov;
   }
 }

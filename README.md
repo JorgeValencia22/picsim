@@ -118,9 +118,17 @@ articuladas, hélice con disco difuminado, tren con dirección, giro y retracci�
 
 ### Escenarios (6)
 Aeródromo RC, campo abierto, cordillera (ladera), costa con acantilados, aeródromo de competición y
-pueblo rural. Terreno por bloques con 3 niveles de detalle y faldones, vegetación instanciada con LOD
-y balanceo por viento, objetos fusionados por bloques (culling), agua animada, personas que miran el
-avión, mangas de viento y banderas orientadas por el viento.
+pueblo rural. Terreno por bloques con 3 niveles de detalle y faldones, con textura de pasto mezclada a
+tres escalas (sin repetición visible). Árboles realistas de bajo peso: copas de «tarjetas» de follaje
+con hojas, agujas y corteza dibujadas por código (sin descargas), normales esféricas y oclusión en el
+interior; pinos, cipreses y álamos con siluetas rama a rama; ~30–60 triángulos por árbol cercano y
+~10 por árbol lejano, con balanceo y aleteo por viento. Objetos fusionados por bloques (culling), agua
+animada, mangas de viento y banderas orientadas por el viento.
+
+Cámara: seguimiento con resortes críticamente amortiguados que se adelantan a la trayectoria.
+Prueba automática con turbulencia y fotogramas irregulares: la mirada es 10× más estable que la
+versión anterior en la cámara de seguimiento (0,765° → 0,076° de sacudida por fotograma) y 2× en la de
+piloto, con el avión a menos de 3° del centro.
 
 Vida del escenario (Configuración → Gráficos → Vida en el escenario):
 - **Otros aviones en el aire** (0–3): compañeros del club que vuelan circuitos con la misma física

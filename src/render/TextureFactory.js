@@ -43,25 +43,41 @@ export function disposeTextures() {
 /** Textura de detalle en escala de grises (multiplica el color de vértice del terreno). */
 export function terrainDetail() {
   return cached(`terrainDetail-${quality}`, () => {
-    const size = Math.round(256 * quality);
+    // pasto visto de cerca: base de ruido periódico (sin costuras) + briznas de hierba dibujadas
+    const size = Math.round(512 * Math.min(1.5, Math.max(0.5, quality)));
     const c = canvas(size, size);
     const g = c.getContext('2d');
     const img = g.createImageData(size, size);
     const n = new SimplexNoise(5);
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
-        // ruido periódico (toroidal) para que la textura sea repetible sin costuras
         const a = (x / size) * Math.PI * 2, b = (y / size) * Math.PI * 2;
         const nx = Math.cos(a) * 1.6, ny = Math.sin(a) * 1.6, nz = Math.cos(b) * 1.6, nw = Math.sin(b) * 1.6;
         const v = 0.5 * n.noise3(nx + nz * 0.7, ny, nw) + 0.3 * n.noise3(nx * 3 + 11, ny * 3, nz * 3 + nw) + 0.2 * n.noise3(nx * 8, ny * 8 + 5, nw * 8);
-        const grain = (Math.random() - 0.5) * 0.12;
-        const val = Math.max(0, Math.min(255, 200 + (v + grain) * 70));
+        const val = Math.max(0, Math.min(255, 196 + v * 60));
         const i = (y * size + x) * 4;
         img.data[i] = img.data[i + 1] = img.data[i + 2] = val;
         img.data[i + 3] = 255;
       }
     }
     g.putImageData(img, 0, 0);
+    // briznas: trazos cortos claros y oscuros (se repiten de forma periódica en los bordes)
+    let seed = 99;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const blades = Math.round(size * size * 0.045);
+    for (let k = 0; k < blades; k++) {
+      const x = rnd() * size, y = rnd() * size;
+      const len = size * (0.006 + rnd() * 0.012);
+      const ang = -Math.PI / 2 + (rnd() - 0.5) * 1.1;
+      const v = rnd() < 0.5 ? 130 + rnd() * 50 : 215 + rnd() * 40;
+      g.strokeStyle = `rgba(${v},${v},${v},${0.35 + rnd() * 0.35})`;
+      g.lineWidth = Math.max(1, size / 700);
+      for (const [ox, oy] of [[0, 0], [size, 0], [-size, 0], [0, size], [0, -size]]) {
+        if (ox && (x > len && x < size - len)) continue;
+        if (oy && (y > len && y < size - len)) continue;
+        g.beginPath(); g.moveTo(x + ox, y + oy); g.lineTo(x + ox + Math.cos(ang) * len, y + oy + Math.sin(ang) * len); g.stroke();
+      }
+    }
     return toTexture(c, { repeat: true, srgb: false, aniso: 8 });
   });
 }

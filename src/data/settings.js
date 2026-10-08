@@ -116,7 +116,7 @@ export function defaultSettings() {
     physics: { assist: 'expert', fidelity: 'realistic', damage: true, limitAttitude: false, limitBank: false, maxBank: 45, maxPitch: 30, autoLevel: true, speedHold: false, landingAid: true, turbulenceScale: 1, flightRadius: 900, signalLoss: true },
     audio: { master: 0.8, engine: 0.85, ambient: 0.55, effects: 0.8, ui: 0.6, spatial: true, muted: false },
     ui: { hud: true, hudScale: 1, hudOpacity: 0.92, units: 'metric', language: 'es', instruments: true, maneuverPopup: true, reduceMotion: false, uiScale: 1, highContrast: false, instructor: true },
-    camera: { default: 'pilot', fov: 55, autoZoom: true, chaseDistance: 1, chaseHeight: 0.3, smoothing: 0.5, sensitivity: 1, shake: true },
+    camera: { default: 'pilot', fov: 55, autoZoom: true, chaseDistance: 1, chaseHeight: 0.3, smoothing: 0.6, sensitivity: 1, shake: true },
     flight: { aircraft: 'skylark', environment: 'airfield', launch: 'runway', weatherMode: 'manual', weather: null },
   };
 }

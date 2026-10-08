@@ -39,6 +39,7 @@ class ParticlePool {
     this.alpha0 = new Float32Array(max);
     this.gravity = new Float32Array(max);
     this.next = 0;
+    this.alive = false; // sin partículas vivas no se recorre ni se sube nada a la GPU
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('aColor', new THREE.BufferAttribute(this.col, 4).setUsage(THREE.DynamicDrawUsage));
@@ -60,11 +61,15 @@ class ParticlePool {
     this.life[i] = life;
     this.maxLife[i] = life;
     this.gravity[i] = gravity;
+    this.alive = true;
   }
 
   update(dt, env) {
+    if (!this.alive) return;
+    let any = false;
     for (let i = 0; i < this.max; i++) {
       if (this.life[i] <= 0) { this.col[i * 4 + 3] = 0; continue; }
+      any = true;
       this.life[i] -= dt;
       const k = i * 3;
       this.vel[k + 1] -= this.gravity[i] * dt;
@@ -79,13 +84,14 @@ class ParticlePool {
       const t = this.life[i] / this.maxLife[i];
       this.col[i * 4 + 3] = this.alpha0[i] * clamp(t * 1.5, 0, 1);
     }
+    this.alive = any;
     const g = this.points.geometry;
     g.attributes.position.needsUpdate = true;
     g.attributes.aColor.needsUpdate = true;
     g.attributes.aSize.needsUpdate = true;
   }
 
-  clear() { this.life.fill(0); this.col.fill(0); }
+  clear() { this.life.fill(0); this.col.fill(0); this.points.geometry.attributes.aColor.needsUpdate = true; this.alive = false; }
 
   dispose() { this.points.geometry.dispose(); this.points.material.dispose(); this.points.removeFromParent(); }
 }

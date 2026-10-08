@@ -5,11 +5,12 @@
  * - Pistas y caminos como "calcos" que siguen el terreno; agua animada (mar y lagunas).
  * - Objetos estáticos fusionados por bloques (pocas llamadas de dibujo, culling por bloque).
  * - Vegetación instanciada por bloques con LOD y balanceo por viento en el shader.
- * - Elementos vivos: personas que miran al avión, mangas de viento y banderas con el viento.
+ * - Elementos vivos: mangas de viento y banderas con el viento.
  */
 import * as THREE from 'three';
 import { SURFACES } from '../environments/EnvironmentBase.js';
-import { propParts, mergeColored, treeGeometry, personGeometry } from './PropGeometry.js';
+import { propParts, mergeColored } from './PropGeometry.js';
+import { foliageAtlas, foliageTreeGeometry, foliageMaterial } from './Foliage.js';
 import { terrainDetail, mownStripes, runwayAsphalt, windsockStripes } from './TextureFactory.js';
 import { DEG, clamp } from '../utils/math3d.js';
 
@@ -28,7 +29,7 @@ export class EnvironmentRenderer {
     this.group = new THREE.Group();
     this.group.name = `env-${env.id}`;
     this.disposables = [];
-    this.animated = { windsocks: [], flags: [], people: null };
+    this.animated = { windsocks: [], flags: [] };
     this.treeChunks = [];
     this.waterMaterials = [];
     this.time = 0;
@@ -38,7 +39,6 @@ export class EnvironmentRenderer {
     this.buildRoads();
     this.buildProps();
     this.buildTrees();
-    this.buildPeople();
     this.buildAnimatedProps();
   }
 
@@ -99,7 +99,19 @@ export class EnvironmentRenderer {
     this.terrainColors = colors;
     const detail = terrainDetail();
     const mat = this.track(new THREE.MeshStandardMaterial({ vertexColors: true, map: detail, roughness: 0.95, metalness: 0 }));
-    // la textura de detalle usa las uv en metros/6
+    // la textura de detalle usa las uv en metros/6; se mezcla a tres escalas para que no se note
+    // la repetición, y se atenúa con la distancia para evitar el centelleo (moiré)
+    mat.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
+        #ifdef USE_MAP
+          float t1 = texture2D( map, vMapUv ).r;
+          float t2 = texture2D( map, vMapUv * 0.137 + vec2( 0.31, 0.77 ) ).r;
+          float t3 = texture2D( map, vMapUv * 0.019 + vec2( 0.53, 0.11 ) ).r;
+          float fade = clamp( length( vViewPosition ) / 220.0, 0.0, 1.0 );
+          float dtl = mix( t1 * 0.5 + t2 * 0.3 + t3 * 0.2, t2 * 0.45 + t3 * 0.55, fade );
+          diffuseColor.rgb *= dtl * 1.06;
+        #endif`);
+    };
     this.terrainMaterial = mat;
     const chunkCells = 32;
     const chunks = Math.ceil(env.res / chunkCells);
@@ -404,25 +416,9 @@ export class EnvironmentRenderer {
   /* ─────────────────────────────── Vegetación ─────────────────────────────── */
 
   treeMaterial() {
-    const mat = this.track(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 }));
     this.swayUniforms = { uTime: { value: 0 }, uWind: { value: new THREE.Vector2(0, 0) } };
-    mat.onBeforeCompile = (shader) => {
-      shader.uniforms.uTime = this.swayUniforms.uTime;
-      shader.uniforms.uWind = this.swayUniforms.uWind;
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform vec2 uWind;')
-        .replace('#include <begin_vertex>', `#include <begin_vertex>
-          #ifdef USE_INSTANCING
-            float ph = instanceMatrix[3].x * 0.13 + instanceMatrix[3].z * 0.17;
-          #else
-            float ph = 0.0;
-          #endif
-          float hk = max(0.0, transformed.y - 1.5) * 0.012;
-          float sw = sin(uTime * 1.6 + ph) * 0.6 + sin(uTime * 3.7 + ph * 1.7) * 0.25;
-          transformed.x += (uWind.x * (0.6 + 0.4 * sw)) * hk;
-          transformed.z += (uWind.y * (0.6 + 0.4 * sw)) * hk;`);
-    };
-    return mat;
+    const atlas = foliageAtlas(this.q.textureQuality ?? 1);
+    return this.track(foliageMaterial(atlas, this.swayUniforms, { alphaToCoverage: !!this.q.antialias }));
   }
 
   buildTrees() {
@@ -433,7 +429,7 @@ export class EnvironmentRenderer {
     const geos = {};
     const getGeo = (v, d) => {
       const k = `${v}-${d}`;
-      if (!geos[k]) geos[k] = this.track(treeGeometry(v, d));
+      if (!geos[k]) geos[k] = this.track(foliageTreeGeometry(v, d));
       return geos[k];
     };
     const chunkSize = 250;
@@ -479,54 +475,6 @@ export class EnvironmentRenderer {
       this.group.add(hi, lo);
       this.treeChunks.push({ center, hi, lo });
     }
-  }
-
-  /* ─────────────────────────────── Personas ─────────────────────────────── */
-
-  buildPeople() {
-    const people = this.env.props.filter((p) => p.type === 'person');
-    if (!people.length) return;
-    const g = personGeometry();
-    const mat = this.track(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
-    const upper = new THREE.InstancedMesh(this.track(g.upper), mat, people.length);
-    const lower = new THREE.InstancedMesh(this.track(g.lower), mat, people.length);
-    const head = new THREE.InstancedMesh(this.track(g.head), mat, people.length);
-    const c = new THREE.Color();
-    people.forEach((p, i) => {
-      upper.setColorAt(i, c.set(p.shirt));
-      lower.setColorAt(i, c.set(p.pants));
-      head.setColorAt(i, c.set('#ffffff'));
-      p.yaw = p.rot || 0;
-    });
-    for (const im of [upper, lower, head]) { im.castShadow = this.q.shadows; this.group.add(im); }
-    this.animated.people = { list: people, upper, lower, head };
-    this.updatePeople(null, 0, true);
-  }
-
-  updatePeople(target, dt, force = false) {
-    const P = this.animated.people;
-    if (!P) return;
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), pos = new THREE.Vector3();
-    const up = new THREE.Vector3(0, 1, 0);
-    P.list.forEach((p, i) => {
-      if (target) {
-        // giran lentamente para mirar el avión (yaw que lleva +Z local hacia el objetivo)
-        const want = Math.atan2(target.x - p.x, target.z - p.z);
-        let d = want - p.yaw;
-        d = Math.atan2(Math.sin(d), Math.cos(d));
-        p.yaw += d * Math.min(1, dt * (1.5 + (i % 3) * 0.5));
-      }
-      const sc = p.height / 1.75;
-      s.set(sc, p.sitting ? sc * 0.75 : sc, sc);
-      pos.set(p.x, p.y, p.z);
-      q.setFromAxisAngle(up, p.yaw);
-      m.compose(pos, q, s);
-      P.upper.setMatrixAt(i, m);
-      P.lower.setMatrixAt(i, m);
-      P.head.setMatrixAt(i, m);
-    });
-    P.upper.instanceMatrix.needsUpdate = P.lower.instanceMatrix.needsUpdate = P.head.instanceMatrix.needsUpdate = true;
-    if (force) for (const im of [P.upper, P.lower, P.head]) im.computeBoundingSphere();
   }
 
   /* ─────────────────────── Mangas de viento y banderas ─────────────────────── */
@@ -614,7 +562,6 @@ export class EnvironmentRenderer {
         c.lo.visible = d >= 520;
       }
     }
-    if (target) this.updatePeople(target, dt);
   }
 
   dispose() {
