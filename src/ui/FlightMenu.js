@@ -3,7 +3,7 @@
  * dificultad, tipo de control, modo de lanzamiento y cámara. También se usa desde la pausa
  * para cambiar de avión o escenario sin reiniciar la aplicación.
  */
-import { h, icon, dots, field, select, range, toggle, segmented, envArt } from './dom.js';
+import { h, icon, dots, field, select, range, toggle, segmented, envImage, aircraftThumb } from './dom.js';
 import { Screen } from './UIManager.js';
 import { L, T, fmtSpeed } from '../core/i18n.js';
 import { CATEGORIES } from '../data/aircraftData.js';
@@ -147,7 +147,7 @@ export class FlightMenu extends Screen {
           if (!s.launch.includes(this.cfg.launch) && !(this.cfg.launch === 'air' || this.cfg.launch === 'approach')) this.cfg.launch = s.launch[0];
           this.updatePreview();
         },
-      }, h('span', { class: 'c' }, x.custom ? L('Personalizada', 'Custom') : T(CATEGORIES[x.category])), h('span', { class: 'n' }, x.name), h('span', { class: 'swatch-row' }, h('i', { style: { background: x.paint.primary } }), h('i', { style: { background: x.paint.secondary } }), h('i', { style: { background: x.paint.accent } })), dots(x.difficulty))));
+      }, aircraftThumb(x), h('span', { class: 'c' }, x.custom ? L('Personalizada', 'Custom') : T(CATEGORIES[x.category])), h('span', { class: 'n' }, x.name), h('span', { class: 'swatch-row' }, h('i', { style: { background: x.paint.primary } }), h('i', { style: { background: x.paint.secondary } }), h('i', { style: { background: x.paint.accent } })), dots(x.difficulty))));
     };
     const cats = [['all', L('Todas', 'All')], ...Object.entries(CATEGORIES).map(([k, v]) => [k, T(v)])];
     if (list.some((x) => x.custom)) cats.push(['custom', L('Personalizadas', 'Custom')]);
@@ -172,7 +172,7 @@ export class FlightMenu extends Screen {
           if (m.windDefault && this.cfg.weatherMode === 'scenario') Object.assign(this.cfg.weather, m.windDefault);
           this.el.querySelector('.summary').textContent = this.summary();
         },
-      }, h('div', { class: 'art', html: envArt(e.icon, m.gradient) }), h('div', { class: 'body' }, h('b', {}, T(m.name)), h('p', {}, T(m.desc)), h('div', { class: 'tags' }, T(m.tags).map((t) => h('span', { class: 'chip' }, t))))));
+      }, h('div', { class: 'art', html: envImage(e.id, e.icon, m.gradient) }), h('div', { class: 'body' }, h('b', {}, T(m.name)), h('p', {}, T(m.desc)), h('div', { class: 'tags' }, T(m.tags).map((t) => h('span', { class: 'chip' }, t))))));
     }
     return grid;
   }

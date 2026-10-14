@@ -1,5 +1,5 @@
 /** Catálogo de escenarios con descripción, características y acceso directo al vuelo. */
-import { h, icon, envArt } from './dom.js';
+import { h, icon, envImage } from './dom.js';
 import { Screen } from './UIManager.js';
 import { L, T } from '../core/i18n.js';
 import { ENVIRONMENTS, environmentMeta } from '../data/environmentData.js';
@@ -8,12 +8,12 @@ export class ScenariosScreen extends Screen {
   build() {
     const a = this.app;
     return h('div', { class: 'screen dim' },
-      this.head(L('Escenarios', 'Scenarios'), L('Seis entornos originales generados proceduralmente', 'Six original procedurally generated environments')),
+      this.head(L('Escenarios', 'Scenarios'), L('Seis entornos originales generados proceduralmente · imágenes del propio juego', 'Six original procedurally generated environments · in-game images')),
       h('div', { class: 'scroll', style: { flex: 1 } },
         h('div', { class: 'env-grid', style: { gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' } }, ENVIRONMENTS.map((e) => {
           const m = environmentMeta(e.id);
           return h('div', { class: 'env-card panel' },
-            h('div', { class: 'art', style: { height: '130px' }, html: envArt(e.icon, m.gradient) }),
+            h('div', { class: 'art', style: { height: '150px' }, html: envImage(e.id, e.icon, m.gradient) }),
             h('div', { class: 'body' },
               h('b', { style: { fontSize: '1.1em' } }, T(m.name)),
               h('p', {}, T(m.desc)),

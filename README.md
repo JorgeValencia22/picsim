@@ -183,6 +183,8 @@ src/render/           — Renderer, SkySystem, EnvironmentRenderer, AircraftMode
 src/gameplay/         — ManeuverDetector, LandingEvaluator, Missions, Statistics, Replay
 src/ui/               — pantallas, HUD, instrumentos, pausa, repeticiones
 src/net/              — contrato para un futuro multijugador (no implementado)
+assets/aircraft|scenarios/ — miniaturas y fotos de los menús, renderizadas con el propio motor
+                        (regenerar: node tools/capture-server.mjs + tools/capture-previews.js en la consola)
 tests/                — pruebas con node:test
 ```
 

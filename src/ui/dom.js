@@ -120,6 +120,21 @@ export function segmented(options, value, onChange) {
   return wrap;
 }
 
+/**
+ * Imagen de la tarjeta de un escenario: foto renderizada con el motor del juego
+ * (assets/scenarios/<envId>.jpg, ver tools/capture-previews.js) sobre la ilustración, que queda de respaldo.
+ */
+export function envImage(envId, icon, gradient) {
+  return `${envArt(icon, gradient)}<img class="shot" src="assets/scenarios/${envId}.jpg" alt="" loading="lazy" decoding="async" onerror="this.remove()">`;
+}
+
+/** Miniatura renderizada de una aeronave (las personalizadas usan la de su modelo base). */
+export function aircraftThumb(entry) {
+  const img = h('img', { class: 'thumb', src: `assets/aircraft/${entry.baseId || entry.id}.png`, alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' });
+  img.addEventListener('error', () => img.remove());
+  return img;
+}
+
 /** Ilustración procedural de un escenario para su tarjeta. */
 export function envArt(id, gradient) {
   const [a, b] = gradient || ['#4a6', '#cdb'];

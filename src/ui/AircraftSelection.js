@@ -3,7 +3,7 @@
  * (varias decoraciones guardables por avión) y editor de parámetros físicos con
  * advertencias de estabilidad. Los cambios visuales no alteran la aerodinámica.
  */
-import { h, icon, dots, field, select, range, segmented } from './dom.js';
+import { h, icon, dots, field, select, range, segmented, aircraftThumb } from './dom.js';
 import { Screen } from './UIManager.js';
 import { L, T } from '../core/i18n.js';
 import { CATEGORIES, AIRFOILS } from '../data/aircraftData.js';
@@ -64,7 +64,7 @@ export class AircraftSelection extends Screen {
       grid.replaceChildren(...list.filter((x) => this.filter === 'all' || x.category === this.filter || (this.filter === 'custom' && x.custom)).map((x) => h('button', {
         class: `ac-card${x.id === this.sel ? ' on' : ''}`,
         onClick: () => { this.sel = x.id; this.draftLivery = null; this.editMods = null; this.refreshDetail(); drawGrid(); },
-      }, h('span', { class: 'c' }, x.custom ? L('Personalizada', 'Custom') : T(CATEGORIES[x.category])), h('span', { class: 'n' }, x.name), dots(x.difficulty))));
+      }, aircraftThumb(x), h('span', { class: 'c' }, x.custom ? L('Personalizada', 'Custom') : T(CATEGORIES[x.category])), h('span', { class: 'n' }, x.name), dots(x.difficulty))));
     };
     drawGrid();
     const cats = [['all', L('Todas', 'All')], ...Object.entries(CATEGORIES).map(([k, v]) => [k, T(v)])];
