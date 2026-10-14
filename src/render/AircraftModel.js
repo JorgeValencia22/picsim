@@ -102,6 +102,13 @@ export class AircraftModel {
       this.profileFn = buildProfile(this.shape, wingTop);
     }
     this.buildMaterials();
+    if (spec.features.includes('paperPlane')) {
+      this.buildPaperPlane();
+      this.buildLights();
+      this.root.traverse((o) => { if (o.isMesh) o.castShadow = opts.shadows !== false; });
+      this.wheelSpin = 0;
+      return;
+    }
     this.buildFuselage();
     for (const s of spec.surfaces) if (s.kind !== 'fuse') this.buildSurface(s);
     this.buildCanopy();
@@ -296,6 +303,100 @@ export class AircraftModel {
     // bancada del motor
     const mount = this.addMesh(new THREE.BoxGeometry(0.06, 0.045, 0.045), this.mats.dark);
     mount.position.set(this.cgX - 0.02, 0, 0);
+  }
+
+  /* ─────────────────────────────── Avión de papel ─────────────────────────────── */
+
+  /**
+   * Dardo de papel doblado: dos alas planas con poliedro sobre la MISMA planta que usa la física,
+   * quilla en V bajo el pliegue central, elevones de cinta adhesiva y líneas de doblez.
+   * El empenaje aerodinámico del modelo de física no se dibuja (equivale a la parte trasera del papel).
+   */
+  buildPaperPlane() {
+    const spec = this.spec;
+    const L = this.livery;
+    const mk = (color, rough = 0.95) => {
+      const m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0, side: THREE.DoubleSide, flatShading: true });
+      this.disposables.push(m);
+      return m;
+    };
+    const paper = mk(L.primary);
+    const keelMat = mk(new THREE.Color(L.primary).multiplyScalar(0.9));
+    const tape = mk(L.secondary, 0.55);
+    const ink = new THREE.LineBasicMaterial({ color: new THREE.Color(L.primary).multiplyScalar(0.72) });
+    const stripe = mk(L.accent, 0.8);
+    this.disposables.push(ink);
+
+    const wings = spec.surfaces.filter((s) => s.kind === 'wing');
+    const wR = wings.find((s) => s.side > 0);
+    const hs = wR.span;
+    const y0 = wR.root.y;
+    const ail = spec.surfaces.find((s) => s.id === 'wingR').controls.find((c) => c.type === 'aileron');
+    const e0 = ail?.from ?? 0.15, e1 = ail?.to ?? 0.9, hc = 1 - (ail?.chord ?? 0.3);
+    const rootTE = stationAt(wR, 0).le[0] + wR.rootChord;
+    // punto del plano del ala (coords de taller) → cuerpo
+    const P = (surf, x, eta) => { const st = stationAt(surf, eta); return this.B(x, st.le[1], st.le[2]); };
+    const te = (s, e) => stationAt(s, e).le[0] + chordAt(s, e);
+    const hinge = (s, e) => stationAt(s, e).le[0] + hc * chordAt(s, e);
+
+    const flatMesh = (pts2, map, mat, parent = this.root) => {
+      const tris = THREE.ShapeUtils.triangulateShape(pts2.map(([u, v]) => new THREE.Vector2(u, v)), []);
+      const pos = [];
+      for (const t of tris) for (const i of t) { const p = map(pts2[i]); pos.push(p.x, p.y, p.z); }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.computeVertexNormals();
+      return this.addMesh(geo, mat, parent);
+    };
+    const lines = (segs, parent = this.root) => {
+      const geo = new THREE.BufferGeometry().setFromPoints(segs.flat());
+      const l = new THREE.LineSegments(geo, ink);
+      parent.add(l);
+      this.disposables.push(geo);
+      return l;
+    };
+
+    for (const s of wings) {
+      const grp = s.side > 0 ? 'wingR' : 'wingL';
+      const le1 = stationAt(s, 1).le[0];
+      // planta: morro → punta → borde de salida, con el hueco del elevón
+      const outline = [
+        [0, 0], [le1, hs], [te(s, 1), hs], [te(s, e1), e1 * hs], [hinge(s, e1), e1 * hs],
+        [hinge(s, e0), e0 * hs], [te(s, e0), e0 * hs], [rootTE, 0],
+      ];
+      const toBody = ([x, v]) => P(s, x, v / hs);
+      const wing = flatMesh(outline, toBody, paper);
+      wing.name = grp;
+      this.detachable[grp].push(wing);
+      // franja decorativa cerca de la punta
+      const a = 0.62, b = 0.7;
+      const xa = (e) => (stationAt(s, e).le[0]);
+      flatMesh([[xa(a) + 0.004, a * hs], [xa(b) + 0.004, b * hs], [hinge(s, b) - 0.006, b * hs], [hinge(s, a) - 0.006, a * hs]],
+        ([x, v]) => P(s, x, v / hs).add(new THREE.Vector3(0, 0.0012, 0)), stripe);
+      // pliegues: del morro hacia el borde de salida
+      const crease = 0.42;
+      lines([[P(s, 0, 0), P(s, te(s, crease), crease)], [P(s, 0, 0), P(s, rootTE, 0)]]);
+      // elevón de cinta, articulado en su línea de bisagra
+      const p0 = P(s, hinge(s, e0), e0), p1 = P(s, hinge(s, e1), e1);
+      const pivot = new THREE.Group();
+      pivot.position.copy(p0);
+      this.root.add(pivot);
+      flatMesh([[hinge(s, e0), e0 * hs], [hinge(s, e1), e1 * hs], [te(s, e1), e1 * hs], [te(s, e0), e0 * hs]], (q) => toBody(q).sub(p0), tape, pivot);
+      this.detachable[grp].push(pivot);
+      this.registerControl(s, { channels: ['aileron', 'elevator'], from: e0, to: e1, max: ail?.max ?? 25 }, pivot, p0, p1);
+    }
+
+    // quilla en V bajo el pliegue central
+    const depth = spec.fuseH;
+    for (const side of [1, -1]) {
+      const z = side * 0.006;
+      const pts = [this.B(0.01, y0, 0), this.B(rootTE, y0, 0), this.B(rootTE - 0.03, y0 - depth, z), this.B(0.09, y0 - depth * 0.35, z * 0.5)];
+      const geo = new THREE.BufferGeometry().setFromPoints([pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]]);
+      geo.computeVertexNormals();
+      this.addMesh(geo, keelMat);
+      lines([[pts[0], pts[3]], [pts[3], pts[2]]]);
+    }
+    this.fuseMesh = null;
   }
 
   /* ─────────────────────────── Superficies sustentadoras ─────────────────────────── */

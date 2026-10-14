@@ -277,6 +277,19 @@ export const AIRCRAFT_DATA = [
     staticMargin: 0.1, launch: ['bungee', 'air'], servo: 220, dragScale: 1.0,
     paint: P('#fbfbfb', '#d00000', '#ffba08', 'tips', 'gloss'),
   },
+  {
+    id: 'paperplane', name: 'Avión de papel RC', category: 'glider', toy: true,
+    desc: { es: 'Un clásico dardo de papel doblado, con elevones de cinta adhesiva y un microreceptor. Planea poco, pero se lanza a mano en cualquier parte.', en: 'A classic folded paper dart with tape elevons and a micro receiver. Modest glide, but hand-launch it anywhere.' },
+    difficulty: 1, aerobatic: 2, channels: 2,
+    mass: 0.06, span: 0.5, root: 0.3, tip: 0.07, sweep: 38, dihedral: 6, washout: 0, wingX: 0.18, wingPos: 'high', airfoil: 'flatPlate',
+    length: 0.58, fuseW: 0.004, fuseH: 0.05, fuseShape: 'profile', canopy: 'none', features: ['paperPlane'],
+    ailerons: { from: 0.15, to: 0.9, chord: 0.3, max: 25 }, flaps: null,
+    tail: { vh: 0.4, vv: 0.04, elevMax: 25, rudMax: 25 },
+    prop: { type: 'none' },
+    gear: { type: 'skid' },
+    staticMargin: 0.12, launch: ['hand', 'air'], servo: 300, dragScale: 1.3, gLimit: 20,
+    paint: P('#f7f5ee', '#c9d3e0', '#d23b3b', 'none', 'matte'),
+  },
 
   /* ───────────────────────────── D. JETS ───────────────────────────── */
   {

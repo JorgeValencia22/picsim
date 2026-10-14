@@ -10,14 +10,14 @@ import { flatWorld, spec, aircraft, run, DT } from './helpers.js';
 
 const world = flatWorld();
 
-test('las 30 aeronaves tienen geometría válida, son estables y sus prestaciones son coherentes', () => {
-  assert.equal(AIRCRAFT_DATA.length, 30);
+test('las 31 aeronaves tienen geometría válida, son estables y sus prestaciones son coherentes', () => {
+  assert.equal(AIRCRAFT_DATA.length, 31);
   for (const e of AIRCRAFT_DATA) {
     const s = spec(e.id);
     assert.ok(s.staticMargin > 0, `${e.id}: margen estático positivo`);
-    assert.ok(s.perf.stallSpeed > 3 && s.perf.stallSpeed < 20, `${e.id}: Vs ${s.perf.stallSpeed}`);
+    assert.ok(s.perf.stallSpeed > (e.toy ? 2 : 3) && s.perf.stallSpeed < 20, `${e.id}: Vs ${s.perf.stallSpeed}`);
     if (s.prop.type !== 'none') assert.ok(s.perf.maxSpeed > s.perf.stallSpeed * 1.5, `${e.id}: Vmax > 1,5 Vs`);
-    else assert.ok(s.perf.bestLD > 15, `${e.id}: planeo L/D ${s.perf.bestLD}`);
+    else assert.ok(s.perf.bestLD > (e.toy ? 5 : 15), `${e.id}: planeo L/D ${s.perf.bestLD}`);
   }
 });
 

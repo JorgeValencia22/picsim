@@ -1,7 +1,7 @@
 # RC FLIGHT SIMULATOR
 
 Simulador 3D de aeromodelismo de radiocontrol para navegador (PC, tablet y móvil), con física
-aerodinámica por superficies, 30 aeronaves, 6 escenarios, meteorología que afecta al vuelo,
+aerodinámica por superficies, 31 aeronaves, 6 escenarios, meteorología que afecta al vuelo,
 entrenamiento, desafíos, estadísticas y repeticiones. Todo el contenido (modelos 3D, terrenos,
 texturas y sonidos) se genera por código: no hay recursos externos ni referencias a archivos inexistentes.
 
@@ -192,7 +192,7 @@ por eso se prueban directamente en Node.
 ## Pruebas (resultado real de `npm test`)
 
 33 pruebas, 33 correctas (≈ 5 s). Incluyen: matemática de cuaterniones; curvas CL/CD con pérdida y
-flaps; atmósfera; propulsión eléctrica y turbina (retardo y parada por combustible); **las 30 aeronaves
+flaps; atmósfera; propulsión eléctrica y turbina (retardo y parada por combustible); **las 31 aeronaves
 estables en vuelo nivelado y en viraje con piloto automático durante 60 s**; despegue en < 40 m;
 rodadura y frenado; pérdida y recuperación; viento de cara y deriva; independencia de los FPS;
 aterrizaje suave sin daños, aterrizaje duro con daño de tren, destrucción y modo sin daños; ala
