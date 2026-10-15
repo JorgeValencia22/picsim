@@ -1241,6 +1241,35 @@ export class AircraftModel {
         m.rotation.x = -sd * 0.5;
       }
     }
+    // raíles de punta de ala con misil de corto alcance (F-16, F-18): siluetas muy características
+    if (X.has('tipRails')) {
+      const wingR = spec.surfaces.find((s) => s.kind === 'wing' && s.side > 0 && !s.lower);
+      if (wingR) {
+        const tip = stationAt(wingR, 1);
+        const len = Math.max(tip.chord * 1.9, L * 0.16), r = L * 0.0075;
+        for (const sd of [1, -1]) {
+          const grp = new THREE.Group();
+          grp.position.set(this.cgX - (tip.le[0] + tip.chord * 0.55), tip.le[1], sd * (Math.abs(tip.le[2]) + r * 1.4));
+          this.root.add(grp);
+          const rail = this.addMesh(new THREE.BoxGeometry(len * 0.8, r * 0.9, r * 1.2), this.mats.paint, grp);
+          rail.position.y = 0;
+          const body = this.addMesh(new THREE.CylinderGeometry(r, r, len, 10), this.mats.metal, grp);
+          body.rotation.z = Math.PI / 2;
+          body.position.y = -r * 1.3;
+          const nose = this.addMesh(new THREE.ConeGeometry(r, r * 3.2, 10), this.mats.radome, grp);
+          nose.rotation.z = -Math.PI / 2;
+          nose.position.set(len / 2 + r * 1.6, -r * 1.3, 0);
+          for (const [fx, fs] of [[len * 0.36, 2.2], [-len * 0.44, 3.0]]) {
+            for (const rot of [0, Math.PI / 2]) {
+              const fin = this.addMesh(new THREE.BoxGeometry(r * 2.2, r * fs * 2, r * 0.25), this.mats.metal, grp);
+              fin.position.set(fx, -r * 1.3, 0);
+              fin.rotation.x = rot + Math.PI / 4;
+            }
+          }
+          this.detachable[sd > 0 ? 'wingR' : 'wingL'].push(grp);
+        }
+      }
+    }
     // radomo del morro en gris oscuro
     if (X.has('radome')) {
       const st = [];

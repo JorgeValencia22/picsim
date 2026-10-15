@@ -194,7 +194,7 @@ export const AIRCRAFT_DATA = [
     tail: { vh: 0.75, vv: 0.11, elevMax: 45, rudMax: 45, elevChord: 0.58, rudChord: 0.62 },
     prop: { type: 'electric', power: 280, thrust: 9.5, pitchSpeed: 19, dia: 0.254, blades: 2, rpm: 9500, capacity: 9.4, spool: 0.08, cells: 3 },
     gear: { type: 'taildragger', wheel: 0.06, pants: false },
-    staticMargin: 0.02, launch: ['runway', 'hand', 'air'], servo: 600, dragScale: 1.2,
+    staticMargin: 0.06, launch: ['runway', 'hand', 'air'], servo: 600, dragScale: 1.2,
     paint: P('#ff2e88', '#25f4ee', '#111111', 'zigzag', 'matte'),
   },
 

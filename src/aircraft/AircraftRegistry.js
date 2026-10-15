@@ -272,12 +272,54 @@ export function buildFullSpec(entry, mods = {}) {
     ? Math.max(full.perf.bestLDSpeed * 1.1, full.perf.stallSpeed * 1.35)
     : Math.max(full.perf.stallSpeed * 1.6, Math.min(full.perf.cruiseSpeed * 0.8, full.perf.stallSpeed * 3));
   full.tailIncidence = trimTail(full, full.trimSpeed);
+  // con motor: la estela de la hélice sobre la cola y la línea de empuje cambian el equilibrio;
+  // se corrige el calado del estabilizador volando a crucero (como en el primer vuelo de prueba)
+  if (full.prop.hasProp || full.prop.type === 'edf' || full.prop.type === 'turbine') full.tailIncidence = trimTailPowered(full);
   full.perf = estimatePerformance(full);
   // límite estructural de carga (g) según el tipo de construcción
   full.gLimit = d.gLimit ?? (d.category === 'trainer' ? (mass < 1.5 ? 12 : 9) : d.category === 'aerobatic' ? 16 : d.category === 'glider' ? (span > 4 ? 8 : 12) : d.category === 'jet' ? 15 : (d.biplane ? 15 : 12));
   // trimado de fábrica: alerón y timón que compensan el par motor a régimen de crucero
   full.trim = computeTorqueTrim(full);
   return full;
+}
+
+/** Profundidad media que necesita el piloto automático para volar nivelado a crucero con motor. */
+function cruiseElevator(full, inc) {
+  for (const t of full.surfaces) if (t.kind === 'hTail') t.incidence = inc;
+  const world = {
+    heightAt: () => 0, normalAt: (x, z, o) => o.set(0, 1, 0), surfaceAt: () => ({ rolling: 0.05, grip: 0.8, friction: 0.5, rough: 0 }),
+    waterLevelAt: () => null, sampleWind: (pp, o) => o.set(0, 0, 0), density: () => 1.225, collision: null, temperature: 15,
+  };
+  const ac = new AircraftPhysics(full, { fidelity: 'realistic', damage: false });
+  const V = Math.max(full.perf.cruiseSpeed * 0.9, full.perf.stallSpeed * 1.5);
+  ac.resetTo(world, { x: 0, z: 0, y: 300, heading: 0, speed: V });
+  const ap = new Autopilot(full);
+  const dt = 1 / 240;
+  let se = 0, n = 0;
+  for (let i = 0; i < 240 * 8; i++) {
+    ap.update(dt, ac, { altitude: 300, heading: 0, speed: V });
+    ac.step(dt, world);
+    if (i > 240 * 4) { se += ac.cmd.elevator; n++; }
+  }
+  return se / n;
+}
+
+/** Calado de cola que deja la profundidad en neutro a crucero con motor (método de la secante). */
+function trimTailPowered(full) {
+  const tails = full.surfaces.filter((s) => s.kind === 'hTail');
+  if (!tails.length) return full.tailIncidence;
+  let x0 = full.tailIncidence, e0 = cruiseElevator(full, x0);
+  if (Math.abs(e0) < 0.01) return x0;
+  const ctl = tails[0].controls?.[0];
+  let x1 = x0 - e0 * (ctl?.max || 20) * 0.5, e1 = cruiseElevator(full, x1);
+  for (let k = 0; k < 3 && Math.abs(e1) > 0.008; k++) {
+    const x2 = Math.abs(e1 - e0) > 1e-6 ? x1 - (e1 * (x1 - x0)) / (e1 - e0) : x1 - e1 * 5;
+    x0 = x1; e0 = e1;
+    x1 = clamp(x2, -8, 8);
+    e1 = cruiseElevator(full, x1);
+  }
+  for (const t of tails) t.incidence = x1;
+  return x1;
 }
 
 /**

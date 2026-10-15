@@ -305,3 +305,30 @@ test('tráfico: cada avión del club vuela 2 min de circuito con el piloto autom
   }
   assert.deepEqual(fails, []);
 });
+
+test('rodaje: con el timón en neutro un triciclo rueda recto (el trimado de vuelo no tuerce la rueda)', () => {
+  for (const id of ['skylark', 'cessna182', 'extra300', 'f16']) {
+    const ac = aircraft(id, { damage: false });
+    ac.resetTo(world, { x: 0, z: 0, heading: 0, onGround: true });
+    run(ac, world, 6, (a) => { a.cmd.throttle = 0.3; a.cmd.rudder = 0; });
+    let h = ac.telemetry.heading * RAD;
+    if (h > 180) h -= 360;
+    assert.ok(Math.abs(h) < 20, `${id}: desvío de rumbo ${h.toFixed(0)}° en 6 s`);
+  }
+});
+
+test('mandos sueltos: trimada a crucero con motor, ninguna aeronave entra en picado ni en espiral en 10 s', () => {
+  for (const e of AIRCRAFT_DATA) {
+    const s = spec(e.id);
+    const V0 = s.perf.cruiseSpeed || s.perf.bestLDSpeed;
+    const ac = aircraft(e.id, { damage: false });
+    ac.resetTo(world, { x: 0, z: 0, y: 300, heading: 0, speed: V0 });
+    const ap = new Autopilot(s);
+    run(ac, world, 6, (a) => ap.update(DT, a, { altitude: 300, heading: 0, speed: V0 }));
+    const thr = ac.cmd.throttle;
+    run(ac, world, 10, (a) => { a.cmd.aileron = 0; a.cmd.elevator = 0; a.cmd.rudder = 0; a.cmd.throttle = thr; });
+    const t = ac.telemetry;
+    assert.ok(Math.abs(t.pitch * RAD) < 35, `${e.id}: cabeceo ${(t.pitch * RAD).toFixed(0)}°`);
+    assert.ok(Math.abs(t.bank * RAD) < 60, `${e.id}: alabeo ${(t.bank * RAD).toFixed(0)}°`);
+  }
+});

@@ -3,7 +3,7 @@
  * (planos automáticos), a bordo (con vibración) y libre. Ninguna cámara altera la física.
  */
 import * as THREE from 'three';
-import { clamp, damp, lerp } from '../utils/math3d.js';
+import { clamp, damp, lerp, wrapPi } from '../utils/math3d.js';
 
 export const CAMERA_MODES = ['pilot', 'chase', 'cinematic', 'onboard', 'free'];
 
@@ -39,6 +39,20 @@ function smoothDamp(cur, target, state, smoothTime, dt) {
   return target + (change + temp) * k;
 }
 const _lead = new THREE.Vector3(), _fwd = new THREE.Vector3();
+const MAX_ELEV = 32 * Math.PI / 180;
+
+/**
+ * Rumbo horizontal (rad) y elevación limitada de una dirección. Si la dirección es casi vertical
+ * (looping, subida vertical) se conserva el rumbo anterior: así la cámara nunca se da la vuelta
+ * de golpe ni queda mirando al cenit, donde lookAt gira sin control.
+ */
+function headingElev(dir, prevYaw, out) {
+  const h = Math.hypot(dir.x, dir.z);
+  out.yaw = h > 0.25 ? Math.atan2(dir.x, dir.z) : prevYaw;
+  out.elev = clamp(Math.atan2(dir.y, Math.max(h, 1e-3)), -MAX_ELEV, MAX_ELEV);
+  return out;
+}
+const _he = { yaw: 0, elev: 0 };
 
 export class CameraManager {
   constructor(settings) {
@@ -63,6 +77,9 @@ export class CameraManager {
     this.velSmoothVel = new THREE.Vector3();
     this.chaseVel = new THREE.Vector3();
     this.chaseFwd = new THREE.Vector3(1, 0, 0);
+    this.chaseYaw = 0; this.chaseElev = 0;
+    this.cinePos = new THREE.Vector3(); this.cineVel = new THREE.Vector3();
+    this.shakeT = 0;
     this.fovState = { v: 0 };
   }
 
@@ -178,12 +195,18 @@ export class CameraManager {
         const span = Math.max(1.2, t.span);
         const D = (span * 2.6 + 2) * (this.s.chaseDistance || 1) / Math.max(0.5, this.zoom);
         const H = D * (this.s.chaseHeight ?? 0.3);
-        // detrás según la trayectoria suavizada (o el morro si va despacio): los giros bruscos y la
-        // turbulencia no sacuden la cámara, que describe curvas amplias como una toma de película
+        // detrás según la trayectoria (o el morro si va despacio), con el rumbo y la elevación
+        // suavizados por separado: en loopings y subidas verticales la cámara gira alrededor del avión
+        // de forma continua en lugar de invertirse, y la turbulencia no la sacude
         const fwdT = _fwd.set(1, 0, 0).applyQuaternion(t.quat);
         if (t.vel.length() > 3) fwdT.lerp(_v2.copy(t.vel).normalize(), 0.7).normalize();
-        if (!this.initialized) this.chaseFwd.copy(fwdT);
-        this.chaseFwd.lerp(fwdT, 1 - Math.exp(-dt / lerp(0.12, 0.7, sm))).normalize();
+        headingElev(fwdT, this.chaseYaw, _he);
+        if (!this.initialized) { this.chaseYaw = _he.yaw; this.chaseElev = _he.elev; }
+        const kc = 1 - Math.exp(-dt / lerp(0.15, 0.75, sm));
+        this.chaseYaw = wrapPi(this.chaseYaw + wrapPi(_he.yaw - this.chaseYaw) * kc);
+        this.chaseElev += (_he.elev - this.chaseElev) * kc;
+        const ce = Math.cos(this.chaseElev);
+        this.chaseFwd.set(Math.sin(this.chaseYaw) * ce, Math.sin(this.chaseElev), Math.cos(this.chaseYaw) * ce);
         const fwd = _v.copy(this.chaseFwd);
         const desired = _v2.copy(t.pos).addScaledVector(fwd, -D);
         desired.y += H;
@@ -229,8 +252,11 @@ export class CameraManager {
         // vibración (motor + aceleraciones)
         if (this.s.shake !== false && !reduce) {
           const amp = (t.vibration || 0) * 0.004 + Math.max(0, Math.abs((t.gLoad || 1) - 1) - 0.3) * 0.002;
-          cam.rotateX((Math.random() - 0.5) * amp);
-          cam.rotateY((Math.random() - 0.5) * amp);
+          // vibración continua (suma de senos), no ruido por fotograma: sin parpadeo de la imagen
+          this.shakeT += dt;
+          const st = this.shakeT;
+          cam.rotateX((Math.sin(st * 37.1) * 0.6 + Math.sin(st * 23.3 + 1.3) * 0.4) * amp * 0.5);
+          cam.rotateY((Math.sin(st * 29.7 + 0.7) * 0.6 + Math.sin(st * 17.9 + 2.1) * 0.4) * amp * 0.5);
         }
         break;
       }
@@ -245,6 +271,10 @@ export class CameraManager {
       default: break;
     }
     this.initialized = true;
+    // plano cercano según la cámara: lo más lejos posible para conservar precisión de profundidad
+    // (evita el parpadeo del terreno, caminos y pistas a cientos de metros)
+    const near = this.mode === 'onboard' ? 0.05 : this.mode === 'chase' ? 0.25 : 0.5;
+    if (cam.near !== near) { cam.near = near; cam.updateProjectionMatrix(); }
     this.fovCurrent = smoothDamp(this.fovCurrent, fov, this.fovState, reduce ? 0.6 : 0.35, dt);
     if (Math.abs(cam.fov - this.fovCurrent) > 0.01) {
       cam.fov = this.fovCurrent;
@@ -258,8 +288,13 @@ export class CameraManager {
     c.t += dt;
     const span = Math.max(1.2, t.span);
     const shot = CINE_SHOTS[c.shot % CINE_SHOTS.length];
-    const fwd = _v.set(1, 0, 0).applyQuaternion(t.quat);
-    const vdir = t.vel.length() > 2 ? _v2.copy(t.vel).normalize() : fwd.clone();
+    // dirección de vuelo suavizada y sólo horizontal para colocar los planos: los giros, loopings
+    // y la turbulencia no hacen saltar la cámara
+    const dirT = t.vel.length() > 2 ? _v2.copy(t.vel).normalize() : _v2.set(1, 0, 0).applyQuaternion(t.quat);
+    headingElev(dirT, this.chaseYaw, _he);
+    if (!this.initialized) this.chaseYaw = _he.yaw;
+    this.chaseYaw = wrapPi(this.chaseYaw + wrapPi(_he.yaw - this.chaseYaw) * (1 - Math.exp(-dt / 0.8)));
+    const vdir = new THREE.Vector3(Math.sin(this.chaseYaw), 0, Math.cos(this.chaseYaw));
     const right = new THREE.Vector3().crossVectors(vdir, UP).normalize();
     if (!this.initialized || c.t > 8) {
       c.t = 0;
@@ -301,6 +336,10 @@ export class CameraManager {
     }
     const g = this.groundAt(cam.position.x, cam.position.z) + 0.4;
     if (cam.position.y < g) cam.position.y = g;
+    // los planos que siguen al avión se mueven con un resorte (los fijos quedan anclados)
+    const moving = shot === 'side' || shot === 'rear' || shot === 'front' || shot === 'orbit';
+    if (!this.initialized || c.t === 0 || !moving) { this.cinePos.copy(cam.position); this.cineVel.set(0, 0, 0); }
+    else cam.position.copy(smoothDampVec(this.cinePos, cam.position, this.cineVel, 0.25, dt));
     if (!this.initialized || c.t === 0) { this.lookTarget.copy(t.pos); this.lookVel.set(0, 0, 0); }
     smoothDampVec(this.lookTarget, t.pos, this.lookVel, 0.08, dt);
     cam.lookAt(this.lookTarget);

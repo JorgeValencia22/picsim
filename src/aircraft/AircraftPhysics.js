@@ -372,7 +372,8 @@ export class AircraftPhysics {
         wheelsOnGround++;
         // eje de rodadura: +X del cuerpo girado por la dirección (timón)
         let steer = 0;
-        if (p.steer) steer = -this.defl.rudder * p.steer * DEG;
+        // el trimado de fábrica compensa el par en vuelo: no debe torcer la rueda en el rodaje
+        if (p.steer) steer = -clamp(this.defl.rudder - (this.spec.trim?.rudder || 0), -1, 1) * p.steer * DEG;
         _fw.set(Math.cos(steer), 0, Math.sin(-steer)).applyQuat(this.q);
         const dn = _fw.dot(nrm);
         _fw.addScaled(nrm, -dn).normalize();

@@ -47,7 +47,11 @@ export function buildAeroModel(full, cgX, opts = {}) {
   const propR = (full.prop.dia || 0) / 2;
   const hasPropwash = full.prop.hasProp;
 
-  for (const surf of full.surfaces) {
+  // efecto diedro de la posición del ala (interferencia ala-fuselaje): el ala alta estabiliza en
+  // alabeo como unos 2-3° de diedro extra y el ala baja lo reduce. Sólo aerodinámico, no visual.
+  const posDihedral = { high: 2.5, shoulder: 1, mid: 0, low: -1.5 }[full.wingPos] ?? 0;
+  for (const surf0 of full.surfaces) {
+    const surf = surf0.kind === 'wing' && posDihedral && !full.biplane ? { ...surf0, dihedral: (surf0.dihedral || 0) + posDihedral } : surf0;
     const n = surf.panels;
     const ar = surf.ar;
     const sweepQC = (surf.sweepQC ?? surf.sweep ?? 0) * DEG;
@@ -182,7 +186,7 @@ export function evaluateAero(model, ctx, out) {
   const { v, omega, wind, windGrad, rho, defl, damage } = ctx;
   const fid = ctx.fid || FIDELITY.realistic;
   const slip = ctx.slip || 0;
-  const swirlK = 0.22 * (fid.swirl ?? 1);
+  const swirlK = 0.1 * (fid.swirl ?? 1);
   const ctlGain = fid.controlGain ?? 1;
   const stallWidthScale = fid.stallWidth ?? 1;
   const vx = v.x, vy = v.y, vz = v.z, ox = omega.x, oy = omega.y, oz = omega.z;

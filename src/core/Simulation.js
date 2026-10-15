@@ -658,9 +658,10 @@ export class Simulation {
       this.model.root.quaternion.copy(this.renderState.quat);
       // vibración visual sutil del motor
       if (ac.engine.vibration > 0.01 && !this.settings.ui.reduceMotion) {
-        const v = ac.engine.vibration * 0.0015;
-        this.model.root.position.x += (Math.random() - 0.5) * v;
-        this.model.root.position.y += (Math.random() - 0.5) * v;
+        // senos de alta frecuencia en vez de ruido por fotograma (el ruido hace «tiritar» la imagen)
+        const v = ac.engine.vibration * 0.0008, tt = this.simTime;
+        this.model.root.position.x += Math.sin(tt * 41.3) * v;
+        this.model.root.position.y += Math.sin(tt * 33.7 + 1.1) * v;
       }
       const wheelSpeed = ac.telemetry.wheelsOnGround > 0 ? ac.telemetry.groundSpeed : this.model.lastWheelSpeed * 0.98 || 0;
       this.model.lastWheelSpeed = wheelSpeed;

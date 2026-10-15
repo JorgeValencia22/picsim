@@ -205,7 +205,7 @@ export const SHAPES = {
       [0.66, 1.42, 0.86, -0.72], [0.8, 1.0, 0.8, -0.68], [0.93, 0.68, 0.7, -0.62], [1, 0.6, 0.6, -0.58],
     ],
     canopy: { t0: 0.1, t1: 0.33, peak: 0.42, h: 1.0, w: 0.82, frames: [] },
-    extras: ['ventralIntake', 'ventralFins', 'nozzle', 'spine', 'radome'],
+    extras: ['ventralIntake', 'ventralFins', 'nozzle', 'spine', 'radome', 'tipRails'],
   },
   f18: {
     n: [2.4, 3.2],
@@ -215,7 +215,7 @@ export const SHAPES = {
       [0.7, 1.45, 0.82, -0.76], [0.88, 1.3, 0.7, -0.66], [1, 1.15, 0.56, -0.54],
     ],
     canopy: { t0: 0.1, t1: 0.32, peak: 0.45, h: 0.95, w: 0.8, frames: [0.04] },
-    extras: ['sideIntakesD', 'twinNozzle', 'radome'],
+    extras: ['sideIntakesD', 'twinNozzle', 'radome', 'tipRails'],
   },
   aquila2000: GLIDER({ c0: 0.03, c1: 0.2, finTop: 0.66 }),
   zephyr: GLIDER({ c0: 0.07, c1: 0.24, finTop: 0.66 }),
